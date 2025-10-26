@@ -1,0 +1,151 @@
+<div class="map-container">
+    <div class="map-placeholder">
+        <div class="map-message">
+            <i class="fas fa-map-marker-alt"></i>
+            <h2>ConectaMed</h2>
+            <p>Plataforma de geolocalização de serviços de saúde</p>
+            <div class="establishments-list">
+                <h3>Estabelecimentos Disponíveis:</h3>
+                {{#if estabelecimentos}}
+                    {{#each estabelecimentos}}
+                        <div class="establishment-card">
+                            <h4>{{this.nome}}</h4>
+                            <p><strong>Endereço:</strong> {{this.enderecoCompleto}}</p>
+                            <p><strong>Telefone:</strong> {{this.telefone}}</p>
+                            <p><strong>Tipo:</strong> {{this.tipo}}</p>
+                            <p><strong>Horário:</strong> {{this.horarioFuncionamento}}</p>
+                            <div class="establishment-actions">
+                                <a href="/local/{{this._id}}" class="btn btn-primary">Ver Detalhes</a>
+                                <a href="tel:{{this.telefone}}" class="btn btn-secondary">Ligar</a>
+                            </div>
+                        </div>
+                    {{/each}}
+                {{else}}
+                    <p>Nenhum estabelecimento encontrado.</p>
+                {{/if}}
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.map-container {
+    height: 100vh;
+    width: 100%;
+    position: relative;
+}
+
+.map-placeholder {
+    height: 100%;
+    width: 100%;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+}
+
+.map-message {
+    text-align: center;
+    max-width: 800px;
+    padding: 40px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 15px;
+    backdrop-filter: blur(10px);
+}
+
+.map-message i {
+    font-size: 4rem;
+    margin-bottom: 20px;
+    color: #fff;
+}
+
+.map-message h2 {
+    font-size: 2.5rem;
+    margin-bottom: 10px;
+    color: #fff;
+}
+
+.map-message p {
+    font-size: 1.2rem;
+    margin-bottom: 30px;
+    color: #f0f0f0;
+}
+
+.establishments-list {
+    text-align: left;
+    margin-top: 30px;
+}
+
+.establishments-list h3 {
+    color: #fff;
+    margin-bottom: 20px;
+    text-align: center;
+}
+
+.establishment-card {
+    background: rgba(255, 255, 255, 0.9);
+    color: #333;
+    padding: 20px;
+    margin-bottom: 15px;
+    border-radius: 10px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.establishment-card h4 {
+    color: #28a745;
+    margin-bottom: 10px;
+}
+
+.establishment-card p {
+    margin-bottom: 8px;
+    color: #666;
+}
+
+.establishment-actions {
+    margin-top: 15px;
+    display: flex;
+    gap: 10px;
+}
+
+.btn {
+    padding: 8px 16px;
+    border-radius: 5px;
+    text-decoration: none;
+    font-weight: 500;
+    transition: all 0.3s ease;
+}
+
+.btn-primary {
+    background: #007bff;
+    color: white;
+}
+
+.btn-primary:hover {
+    background: #0056b3;
+}
+
+.btn-secondary {
+    background: #6c757d;
+    color: white;
+}
+
+.btn-secondary:hover {
+    background: #5a6268;
+}
+
+@media (max-width: 768px) {
+    .map-message {
+        padding: 20px;
+    }
+    
+    .map-message h2 {
+        font-size: 2rem;
+    }
+    
+    .establishment-actions {
+        flex-direction: column;
+    }
+}
+</style>
+

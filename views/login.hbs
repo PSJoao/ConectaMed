@@ -1,0 +1,140 @@
+<!-- Página de Login -->
+<div class="auth-page">
+    <div class="container">
+        <div class="auth-container">
+            <div class="auth-card">
+                <div class="auth-header">
+                    <h1 class="auth-title">Entrar</h1>
+                    <p class="auth-subtitle">Acesse sua conta administrativa</p>
+                </div>
+                
+                {{#if error}}
+                    <div class="alert alert-error">
+                        <i class="icon-alert"></i>
+                        {{error}}
+                    </div>
+                {{/if}}
+                
+                <form class="auth-form" id="loginForm">
+                    <div class="form-group">
+                        <label for="email" class="form-label">Email</label>
+                        <input type="email" id="email" name="email" class="form-input" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="senha" class="form-label">Senha</label>
+                        <div class="password-input">
+                            <input type="password" id="senha" name="senha" class="form-input" required>
+                            <button type="button" class="password-toggle" id="passwordToggle">
+                                <i class="icon-eye"></i>
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="form-options">
+                        <label class="checkbox-label">
+                            <input type="checkbox" name="lembrar">
+                            <span class="checkbox-text">Lembrar de mim</span>
+                        </label>
+                    </div>
+                    
+                    <button type="submit" class="btn btn-primary btn-full">
+                        <span class="btn-text">Entrar</span>
+                        <div class="btn-loading" style="display: none;">
+                            <div class="loading-spinner"></div>
+                        </div>
+                    </button>
+                </form>
+                
+                <div class="auth-footer">
+                    <p>Não tem uma conta? <a href="/cadastro">Cadastre-se</a></p>
+                    <p><a href="/">Voltar ao início</a></p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const loginForm = document.getElementById('loginForm');
+    const passwordToggle = document.getElementById('passwordToggle');
+    const senhaInput = document.getElementById('senha');
+    
+    // Toggle password visibility
+    passwordToggle.addEventListener('click', function() {
+        const type = senhaInput.getAttribute('type') === 'password' ? 'text' : 'password';
+        senhaInput.setAttribute('type', type);
+        
+        const icon = this.querySelector('i');
+        icon.classList.toggle('icon-eye');
+        icon.classList.toggle('icon-eye-off');
+    });
+    
+    // Handle form submission
+    loginForm.addEventListener('submit', async function(e) {
+        e.preventDefault();
+        
+        const submitBtn = this.querySelector('button[type="submit"]');
+        const btnText = submitBtn.querySelector('.btn-text');
+        const btnLoading = submitBtn.querySelector('.btn-loading');
+        
+        // Show loading state
+        btnText.style.display = 'none';
+        btnLoading.style.display = 'block';
+        submitBtn.disabled = true;
+        
+        try {
+            const formData = new FormData(this);
+            const response = await fetch('/api/auth/login', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    email: formData.get('email'),
+                    senha: formData.get('senha')
+                })
+            });
+            
+            const result = await response.json();
+            
+            if (result.success) {
+                // Redirect to dashboard
+                window.location.href = '/admin/dashboard';
+            } else {
+                // Show error
+                showAlert(result.error || 'Erro no login', 'error');
+            }
+        } catch (error) {
+            console.error('Erro no login:', error);
+            showAlert('Erro de conexão. Tente novamente.', 'error');
+        } finally {
+            // Reset button state
+            btnText.style.display = 'block';
+            btnLoading.style.display = 'none';
+            submitBtn.disabled = false;
+        }
+    });
+    
+    function showAlert(message, type) {
+        const alertDiv = document.createElement('div');
+        alertDiv.className = `alert alert-${type}`;
+        alertDiv.innerHTML = `
+            <i class="icon-alert"></i>
+            ${message}
+        `;
+        
+        const form = document.getElementById('loginForm');
+        form.insertBefore(alertDiv, form.firstChild);
+        
+        // Remove alert after 5 seconds
+        setTimeout(() => {
+            alertDiv.remove();
+        }, 5000);
+    }
+});
+</script>
+
+
+

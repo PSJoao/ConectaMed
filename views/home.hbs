@@ -1,0 +1,54 @@
+<!-- Controles do Mapa -->
+<div class="map-controls">
+    <button class="map-control-btn" id="centerMapBtn" title="Centralizar no meu local">
+        <i class="fas fa-location-arrow"></i>
+    </button>
+    <button class="map-control-btn" id="zoomInBtn" title="Aproximar">
+        <i class="fas fa-plus"></i>
+    </button>
+    <button class="map-control-btn" id="zoomOutBtn" title="Afastar">
+        <i class="fas fa-minus"></i>
+    </button>
+</div>
+
+<!-- Lista de Resultados Flutuante -->
+<div class="results-panel" id="resultsPanel">
+    <div class="results-header">
+        <h3>Estabelecimentos Encontrados</h3>
+        <div class="results-count">
+            <span id="resultsCount">0</span> estabelecimentos
+        </div>
+        <button class="results-close" id="resultsClose">
+            <i class="fas fa-times"></i>
+        </button>
+    </div>
+    
+    <div class="results-list" id="resultsList">
+        <!-- Resultados carregados dinamicamente -->
+    </div>
+    
+    <div class="no-results" id="noResults" style="display: none;">
+        <div class="no-results-content">
+            <i class="fas fa-search"></i>
+            <h4>Nenhum estabelecimento encontrado</h4>
+            <p>Tente ajustar os filtros ou expandir o raio de busca</p>
+            <button class="btn btn-primary" id="adjustFiltersBtn">Ajustar Filtros</button>
+        </div>
+    </div>
+</div>
+
+<!-- Scripts específicos da página -->
+<script>
+    // Dados dos estabelecimentos passados do servidor
+    const estabelecimentosData = {{{estabelecimentos}}};
+    
+    // Inicializar mapa quando a página carregar
+    document.addEventListener('DOMContentLoaded', function() {
+        if (typeof initMap === 'function') {
+            initMap();
+        }
+    });
+</script>
+
+
+

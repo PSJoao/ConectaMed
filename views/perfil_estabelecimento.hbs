@@ -1,0 +1,387 @@
+<!-- Página de Perfil do Estabelecimento -->
+<div class="establishment-profile">
+    <div class="container">
+        <!-- Header do Estabelecimento -->
+        <div class="profile-header">
+            <div class="profile-info">
+                <h1 class="profile-name">{{estabelecimento.nome}}</h1>
+                <div class="profile-badges">
+                    <span class="badge badge-type">{{estabelecimento.tipo}}</span>
+                    {{#if estabelecimento.notaMedia}}
+                    <span class="badge badge-rating">
+                        <i class="icon-star"></i>
+                        {{estabelecimento.notaMedia}}
+                    </span>
+                    {{/if}}
+                </div>
+                
+                <div class="profile-actions">
+                    <button class="btn btn-primary" id="directionsBtn">
+                        <i class="icon-navigation"></i>
+                        Traçar Rota
+                    </button>
+                    <a href="tel:{{estabelecimento.telefone}}" class="btn btn-outline">
+                        <i class="icon-phone"></i>
+                        Ligar
+                    </a>
+                </div>
+            </div>
+            
+            {{#if estabelecimento.fotos.length}}
+            <div class="profile-gallery">
+                <div class="gallery-main">
+                    <img src="{{estabelecimento.fotos.[0]}}" alt="{{estabelecimento.nome}}" class="gallery-image">
+                </div>
+                {{#if (gt estabelecimento.fotos.length 1)}}
+                <div class="gallery-thumbnails">
+                    {{#each estabelecimento.fotos}}
+                    <img src="{{this}}" alt="{{../estabelecimento.nome}}" class="gallery-thumb">
+                    {{/each}}
+                </div>
+                {{/if}}
+            </div>
+            {{/if}}
+        </div>
+        
+        <!-- Informações Principais -->
+        <div class="profile-content">
+            <div class="content-grid">
+                <!-- Informações de Contato -->
+                <div class="info-section">
+                    <h2>Informações de Contato</h2>
+                    
+                    <div class="info-list">
+                        <div class="info-item">
+                            <i class="icon-location"></i>
+                            <div class="info-content">
+                                <strong>Endereço</strong>
+                                <p>{{estabelecimento.enderecoCompleto}}</p>
+                            </div>
+                        </div>
+                        
+                        <div class="info-item">
+                            <i class="icon-phone"></i>
+                            <div class="info-content">
+                                <strong>Telefone</strong>
+                                <p>{{formatPhone estabelecimento.telefone}}</p>
+                            </div>
+                        </div>
+                        
+                        <div class="info-item">
+                            <i class="icon-clock"></i>
+                            <div class="info-content">
+                                <strong>Horário de Funcionamento</strong>
+                                <p>{{estabelecimento.horarioFuncionamento}}</p>
+                            </div>
+                        </div>
+                        
+                        {{#if estabelecimento.site}}
+                        <div class="info-item">
+                            <i class="icon-globe"></i>
+                            <div class="info-content">
+                                <strong>Site</strong>
+                                <p><a href="{{estabelecimento.site}}" target="_blank">{{estabelecimento.site}}</a></p>
+                            </div>
+                        </div>
+                        {{/if}}
+                    </div>
+                    
+                    {{#if estabelecimento.descricao}}
+                    <div class="description">
+                        <h3>Sobre</h3>
+                        <p>{{estabelecimento.descricao}}</p>
+                    </div>
+                    {{/if}}
+                </div>
+                
+                <!-- Médicos -->
+                {{#if estabelecimento.medicos.length}}
+                <div class="doctors-section">
+                    <h2>Médicos</h2>
+                    
+                    <div class="doctors-list">
+                        {{#each estabelecimento.medicos}}
+                        <div class="doctor-card">
+                            <div class="doctor-info">
+                                <h3>{{nome}}</h3>
+                                <p class="doctor-crm">CRM: {{crm}}</p>
+                                
+                                {{#if especialidades.length}}
+                                <div class="doctor-specialties">
+                                    <strong>Especialidades:</strong>
+                                    <div class="specialties-list">
+                                        {{#each especialidades}}
+                                        <span class="specialty-tag">{{this}}</span>
+                                        {{/each}}
+                                    </div>
+                                </div>
+                                {{/if}}
+                                
+                                {{#if conveniosAceitos.length}}
+                                <div class="doctor-insurances">
+                                    <strong>Convênios Aceitos:</strong>
+                                    <div class="insurances-list">
+                                        {{#each conveniosAceitos}}
+                                        <span class="insurance-tag">{{this}}</span>
+                                        {{/each}}
+                                    </div>
+                                </div>
+                                {{/if}}
+                                
+                                {{#if biografia}}
+                                <div class="doctor-bio">
+                                    <p>{{biografia}}</p>
+                                </div>
+                                {{/if}}
+                                
+                                {{#if telefone}}
+                                <div class="doctor-contact">
+                                    <a href="tel:{{telefone}}" class="btn btn-sm btn-outline">
+                                        <i class="icon-phone"></i>
+                                        {{formatPhone telefone}}
+                                    </a>
+                                </div>
+                                {{/if}}
+                            </div>
+                        </div>
+                        {{/each}}
+                    </div>
+                </div>
+                {{/if}}
+                
+                <!-- Convênios Gerais -->
+                {{#if estabelecimento.conveniosGerais.length}}
+                <div class="insurances-section">
+                    <h2>Convênios Aceitos</h2>
+                    
+                    <div class="insurances-grid">
+                        {{#each estabelecimento.conveniosGerais}}
+                        <span class="insurance-tag">{{this}}</span>
+                        {{/each}}
+                    </div>
+                </div>
+                {{/if}}
+                
+                <!-- Avaliações -->
+                {{#if estabelecimento.avaliacoes.length}}
+                <div class="reviews-section">
+                    <h2>Avaliações</h2>
+                    
+                    <div class="reviews-summary">
+                        <div class="rating-average">
+                            <span class="rating-number">{{estabelecimento.notaMedia}}</span>
+                            <div class="rating-stars">
+                                {{#times 5}}
+                                    {{#if (lt this estabelecimento.notaMedia)}}
+                                        <i class="icon-star filled"></i>
+                                    {{else}}
+                                        <i class="icon-star"></i>
+                                    {{/if}}
+                                {{/times}}
+                            </div>
+                            <p>{{estabelecimento.avaliacoes.length}} avaliações</p>
+                        </div>
+                    </div>
+                    
+                    <div class="reviews-list">
+                        {{#each estabelecimento.avaliacoes}}
+                        <div class="review-card">
+                            <div class="review-header">
+                                <div class="review-user">
+                                    <strong>{{usuario}}</strong>
+                                </div>
+                                <div class="review-rating">
+                                    {{#times nota}}
+                                        <i class="icon-star filled"></i>
+                                    {{/times}}
+                                    {{#times (subtract 5 nota)}}
+                                        <i class="icon-star"></i>
+                                    {{/times}}
+                                </div>
+                            </div>
+                            
+                            {{#if comentario}}
+                            <div class="review-comment">
+                                <p>{{comentario}}</p>
+                            </div>
+                            {{/if}}
+                            
+                            <div class="review-date">
+                                {{formatDate data}}
+                            </div>
+                        </div>
+                        {{/each}}
+                    </div>
+                </div>
+                {{/if}}
+            </div>
+        </div>
+        
+        <!-- Seção de Avaliação -->
+        <div class="review-form-section">
+            <h2>Avaliar Estabelecimento</h2>
+            
+            <form class="review-form" id="reviewForm">
+                <div class="form-group">
+                    <label for="reviewUser" class="form-label">Seu Nome</label>
+                    <input type="text" id="reviewUser" name="usuario" class="form-input" required>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">Avaliação</label>
+                    <div class="rating-input">
+                        <input type="hidden" id="rating" name="nota" value="5">
+                        <div class="stars">
+                            {{#times 5}}
+                            <i class="icon-star rating-star" data-rating="{{add this 1}}"></i>
+                            {{/times}}
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="reviewComment" class="form-label">Comentário (opcional)</label>
+                    <textarea id="reviewComment" name="comentario" class="form-textarea" rows="4" placeholder="Deixe seu comentário sobre o estabelecimento..."></textarea>
+                </div>
+                
+                <button type="submit" class="btn btn-primary">
+                    <span class="btn-text">Enviar Avaliação</span>
+                    <div class="btn-loading" style="display: none;">
+                        <div class="loading-spinner"></div>
+                    </div>
+                </button>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const directionsBtn = document.getElementById('directionsBtn');
+    const reviewForm = document.getElementById('reviewForm');
+    const ratingStars = document.querySelectorAll('.rating-star');
+    const ratingInput = document.getElementById('rating');
+    
+    // Handle directions button
+    directionsBtn.addEventListener('click', function() {
+        if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition(function(position) {
+                const userLat = position.coords.latitude;
+                const userLng = position.coords.longitude;
+                const destination = '{{estabelecimento.enderecoCompleto}}';
+                
+                // Open Google Maps with directions
+                const url = `https://www.google.com/maps/dir/${userLat},${userLng}/${encodeURIComponent(destination)}`;
+                window.open(url, '_blank');
+            }, function(error) {
+                alert('Não foi possível obter sua localização. Abrindo mapa sem direções.');
+                const url = `https://www.google.com/maps/search/${encodeURIComponent('{{estabelecimento.enderecoCompleto}}')}`;
+                window.open(url, '_blank');
+            });
+        } else {
+            const url = `https://www.google.com/maps/search/${encodeURIComponent('{{estabelecimento.enderecoCompleto}}')}`;
+            window.open(url, '_blank');
+        }
+    });
+    
+    // Handle rating stars
+    ratingStars.forEach(star => {
+        star.addEventListener('click', function() {
+            const rating = parseInt(this.dataset.rating);
+            ratingInput.value = rating;
+            
+            ratingStars.forEach((s, index) => {
+                if (index < rating) {
+                    s.classList.add('filled');
+                } else {
+                    s.classList.remove('filled');
+                }
+            });
+        });
+        
+        star.addEventListener('mouseenter', function() {
+            const rating = parseInt(this.dataset.rating);
+            ratingStars.forEach((s, index) => {
+                if (index < rating) {
+                    s.classList.add('hover');
+                } else {
+                    s.classList.remove('hover');
+                }
+            });
+        });
+    });
+    
+    // Handle review form submission
+    reviewForm.addEventListener('submit', async function(e) {
+        e.preventDefault();
+        
+        const submitBtn = this.querySelector('button[type="submit"]');
+        const btnText = submitBtn.querySelector('.btn-text');
+        const btnLoading = submitBtn.querySelector('.btn-loading');
+        
+        // Show loading state
+        btnText.style.display = 'none';
+        btnLoading.style.display = 'block';
+        submitBtn.disabled = true;
+        
+        try {
+            const formData = new FormData(this);
+            const response = await fetch('/api/estabelecimentos/{{estabelecimento._id}}/avaliar', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    usuario: formData.get('usuario'),
+                    nota: parseInt(formData.get('nota')),
+                    comentario: formData.get('comentario')
+                })
+            });
+            
+            const result = await response.json();
+            
+            if (result.success) {
+                showAlert('Avaliação enviada com sucesso!', 'success');
+                this.reset();
+                ratingInput.value = 5;
+                ratingStars.forEach((s, index) => {
+                    if (index < 5) {
+                        s.classList.add('filled');
+                    } else {
+                        s.classList.remove('filled');
+                    }
+                });
+            } else {
+                showAlert(result.error || 'Erro ao enviar avaliação', 'error');
+            }
+        } catch (error) {
+            console.error('Erro ao enviar avaliação:', error);
+            showAlert('Erro de conexão. Tente novamente.', 'error');
+        } finally {
+            // Reset button state
+            btnText.style.display = 'block';
+            btnLoading.style.display = 'none';
+            submitBtn.disabled = false;
+        }
+    });
+    
+    function showAlert(message, type) {
+        const alertDiv = document.createElement('div');
+        alertDiv.className = `alert alert-${type}`;
+        alertDiv.innerHTML = `
+            <i class="icon-alert"></i>
+            ${message}
+        `;
+        
+        const form = document.getElementById('reviewForm');
+        form.insertBefore(alertDiv, form.firstChild);
+        
+        // Remove alert after 5 seconds
+        setTimeout(() => {
+            alertDiv.remove();
+        }, 5000);
+    }
+});
+</script>
+
+

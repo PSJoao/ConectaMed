@@ -1,0 +1,363 @@
+<div class="map-container">
+    <div id="map" style="height: 100vh; width: 100%;"></div>
+    
+    <!-- Overlay com informações -->
+    <div class="map-overlay">
+        <div class="search-container">
+            <input type="text" id="searchInput" placeholder="Buscar estabelecimentos...">
+            <button id="searchBtn"><i class="fas fa-search"></i></button>
+        </div>
+        
+        <div class="filter-container">
+            <button id="filterBtn" class="filter-btn">
+                <i class="fas fa-filter"></i> Filtros
+            </button>
+        </div>
+    </div>
+    
+    <!-- Menu de filtros -->
+    <div id="filterMenu" class="filter-menu">
+        <div class="filter-header">
+            <h3>Filtros</h3>
+            <button id="closeFilterBtn">&times;</button>
+        </div>
+        <div class="filter-content">
+            <div class="filter-group">
+                <label>Especialidades:</label>
+                <div id="especialidadesList"></div>
+            </div>
+            <div class="filter-group">
+                <label>Convênios:</label>
+                <div id="conveniosList"></div>
+            </div>
+            <div class="filter-group">
+                <label>Tipo:</label>
+                <div id="tiposList"></div>
+            </div>
+        </div>
+        <div class="filter-actions">
+            <button id="applyFilters" class="btn-primary">Aplicar</button>
+            <button id="clearFilters" class="btn-secondary">Limpar</button>
+        </div>
+    </div>
+</div>
+
+<!-- Leaflet CSS -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+
+<!-- Leaflet JavaScript -->
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+<script>
+// Dados dos estabelecimentos
+const estabelecimentos = {{{estabelecimentos}}};
+let map;
+let markers = [];
+
+// Inicializar mapa
+function initMap() {
+    console.log('Inicializando mapa com Leaflet...');
+    
+    // Criar mapa
+    map = L.map('map').setView([-23.5505, -46.6333], 13);
+    
+    // Adicionar camada de tiles (OpenStreetMap - GRATUITO)
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© OpenStreetMap contributors'
+    }).addTo(map);
+    
+    // Adicionar marcadores dos estabelecimentos
+    addEstablishmentMarkers();
+    
+    // Configurar eventos
+    setupMapEvents();
+    
+    console.log('Mapa inicializado com sucesso!');
+}
+
+// Adicionar marcadores dos estabelecimentos
+function addEstablishmentMarkers() {
+    if (!estabelecimentos || estabelecimentos.length === 0) {
+        console.log('Nenhum estabelecimento encontrado');
+        return;
+    }
+    
+    estabelecimentos.forEach(est => {
+        if (est.localizacao && est.localizacao.coordinates) {
+            const [lng, lat] = est.localizacao.coordinates;
+            
+            // Criar marcador
+            const marker = L.marker([lat, lng]).addTo(map);
+            
+            // Adicionar popup
+            const popupContent = `
+                <div class="marker-popup">
+                    <h4>${est.nome}</h4>
+                    <p><strong>Endereço:</strong> ${est.enderecoCompleto}</p>
+                    <p><strong>Telefone:</strong> ${est.telefone}</p>
+                    <p><strong>Tipo:</strong> ${est.tipo}</p>
+                    <div class="popup-actions">
+                        <a href="/local/${est._id}" class="btn btn-primary">Ver Detalhes</a>
+                        <a href="tel:${est.telefone}" class="btn btn-secondary">Ligar</a>
+                    </div>
+                </div>
+            `;
+            
+            marker.bindPopup(popupContent);
+            markers.push(marker);
+        }
+    });
+    
+    console.log(`${markers.length} marcadores adicionados ao mapa`);
+}
+
+// Configurar eventos do mapa
+function setupMapEvents() {
+    // Busca
+    const searchInput = document.getElementById('searchInput');
+    const searchBtn = document.getElementById('searchBtn');
+    
+    if (searchBtn) {
+        searchBtn.addEventListener('click', performSearch);
+    }
+    
+    if (searchInput) {
+        searchInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                performSearch();
+            }
+        });
+    }
+    
+    // Filtros
+    const filterBtn = document.getElementById('filterBtn');
+    const closeFilterBtn = document.getElementById('closeFilterBtn');
+    const filterMenu = document.getElementById('filterMenu');
+    
+    if (filterBtn) {
+        filterBtn.addEventListener('click', () => {
+            filterMenu.classList.add('show');
+        });
+    }
+    
+    if (closeFilterBtn) {
+        closeFilterBtn.addEventListener('click', () => {
+            filterMenu.classList.remove('show');
+        });
+    }
+    
+    // Aplicar filtros
+    const applyFilters = document.getElementById('applyFilters');
+    const clearFilters = document.getElementById('clearFilters');
+    
+    if (applyFilters) {
+        applyFilters.addEventListener('click', applyFiltersToMap);
+    }
+    
+    if (clearFilters) {
+        clearFilters.addEventListener('click', clearAllFilters);
+    }
+}
+
+// Realizar busca
+function performSearch() {
+    const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+    
+    markers.forEach(marker => {
+        const popup = marker.getPopup();
+        const content = popup.getContent().toLowerCase();
+        
+        if (content.includes(searchTerm)) {
+            marker.openPopup();
+        }
+    });
+}
+
+// Aplicar filtros
+function applyFiltersToMap() {
+    // Implementar lógica de filtros aqui
+    console.log('Aplicando filtros...');
+}
+
+// Limpar filtros
+function clearAllFilters() {
+    document.getElementById('searchInput').value = '';
+    console.log('Filtros limpos');
+}
+
+// Inicializar quando a página carregar
+document.addEventListener('DOMContentLoaded', initMap);
+</script>
+
+<style>
+.map-container {
+    position: relative;
+    height: 100vh;
+    width: 100%;
+}
+
+.map-overlay {
+    position: absolute;
+    top: 20px;
+    left: 20px;
+    z-index: 1000;
+    display: flex;
+    gap: 10px;
+}
+
+.search-container {
+    display: flex;
+    background: white;
+    border-radius: 25px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    overflow: hidden;
+}
+
+.search-container input {
+    border: none;
+    padding: 10px 15px;
+    width: 250px;
+    outline: none;
+}
+
+.search-container button {
+    background: #007bff;
+    color: white;
+    border: none;
+    padding: 10px 15px;
+    cursor: pointer;
+}
+
+.filter-btn {
+    background: white;
+    border: none;
+    padding: 10px 15px;
+    border-radius: 25px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.filter-menu {
+    position: fixed;
+    top: 0;
+    right: -400px;
+    width: 400px;
+    height: 100vh;
+    background: white;
+    box-shadow: -2px 0 10px rgba(0,0,0,0.1);
+    transition: right 0.3s ease;
+    z-index: 1001;
+    padding: 20px;
+    box-sizing: border-box;
+}
+
+.filter-menu.show {
+    right: 0;
+}
+
+.filter-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid #eee;
+}
+
+.filter-header h3 {
+    margin: 0;
+    color: #333;
+}
+
+.filter-header button {
+    background: none;
+    border: none;
+    font-size: 24px;
+    cursor: pointer;
+    color: #666;
+}
+
+.filter-group {
+    margin-bottom: 20px;
+}
+
+.filter-group label {
+    display: block;
+    margin-bottom: 10px;
+    font-weight: bold;
+    color: #333;
+}
+
+.filter-actions {
+    position: absolute;
+    bottom: 20px;
+    left: 20px;
+    right: 20px;
+    display: flex;
+    gap: 10px;
+}
+
+.btn {
+    padding: 10px 20px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-weight: 500;
+    flex: 1;
+}
+
+.btn-primary {
+    background: #007bff;
+    color: white;
+}
+
+.btn-secondary {
+    background: #6c757d;
+    color: white;
+}
+
+.marker-popup {
+    min-width: 200px;
+}
+
+.marker-popup h4 {
+    margin: 0 0 10px 0;
+    color: #007bff;
+}
+
+.marker-popup p {
+    margin: 5px 0;
+    color: #666;
+}
+
+.popup-actions {
+    margin-top: 10px;
+    display: flex;
+    gap: 5px;
+}
+
+.popup-actions .btn {
+    padding: 5px 10px;
+    font-size: 12px;
+}
+
+@media (max-width: 768px) {
+    .map-overlay {
+        flex-direction: column;
+        width: calc(100% - 40px);
+    }
+    
+    .search-container input {
+        width: 100%;
+    }
+    
+    .filter-menu {
+        width: 100%;
+        right: -100%;
+    }
+}
+</style>
+

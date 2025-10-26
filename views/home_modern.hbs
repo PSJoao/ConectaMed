@@ -1,0 +1,802 @@
+<!-- Header moderno como Google Maps -->
+<header class="modern-header">
+    <!-- Menu lateral esquerdo -->
+    <div class="left-menu">
+        <button id="menuToggle" class="menu-btn">
+            <i class="fas fa-bars"></i>
+        </button>
+    </div>
+    
+    <!-- Logo central -->
+    <div class="logo-container">
+        <div class="logo">
+            <i class="fas fa-heartbeat"></i>
+        </div>
+        <span class="logo-text">ConectaMed</span>
+    </div>
+    
+    <!-- Barra de pesquisa -->
+    <div class="search-container">
+        <div class="search-box">
+            <i class="fas fa-search"></i>
+            <input type="text" id="searchInput" placeholder="Buscar médicos, clínicas, especialidades...">
+        </div>
+    </div>
+    
+    <!-- Botão filtros -->
+    <div class="right-menu">
+        <button id="filterToggle" class="filter-btn">
+            <i class="fas fa-plus-square"></i>
+        </button>
+    </div>
+</header>
+
+<!-- Menu lateral esquerdo -->
+<nav id="leftMenu" class="left-menu-panel">
+    <div class="menu-header">
+        <h3>Menu</h3>
+        <button id="closeLeftMenu" class="close-btn">&times;</button>
+    </div>
+    <div class="menu-content">
+        <a href="/" class="menu-item active">
+            <i class="fas fa-map-marker-alt"></i>
+            <span>Mapa</span>
+        </a>
+        <a href="/login" class="menu-item">
+            <i class="fas fa-sign-in-alt"></i>
+            <span>Login</span>
+        </a>
+        <a href="/cadastro" class="menu-item">
+            <i class="fas fa-user-plus"></i>
+            <span>Cadastro</span>
+        </a>
+        <a href="/sobre" class="menu-item">
+            <i class="fas fa-info-circle"></i>
+            <span>Sobre</span>
+        </a>
+        <a href="/contato" class="menu-item">
+            <i class="fas fa-envelope"></i>
+            <span>Contato</span>
+        </a>
+    </div>
+</nav>
+
+<!-- Menu de filtros lateral direito -->
+<aside id="filterMenu" class="filter-panel">
+    <div class="filter-header">
+        <h3>Filtros</h3>
+        <button id="closeFilterMenu" class="close-btn">&times;</button>
+    </div>
+    <div class="filter-content">
+        <div class="filter-section">
+            <h4>Especialidades</h4>
+            <div id="especialidadesList" class="filter-options">
+                <!-- Será preenchido dinamicamente -->
+            </div>
+        </div>
+        <div class="filter-section">
+            <h4>Convênios</h4>
+            <div id="conveniosList" class="filter-options">
+                <!-- Será preenchido dinamicamente -->
+            </div>
+        </div>
+        <div class="filter-section">
+            <h4>Tipo de Estabelecimento</h4>
+            <div id="tiposList" class="filter-options">
+                <!-- Será preenchido dinamicamente -->
+            </div>
+        </div>
+    </div>
+    <div class="filter-actions">
+        <button id="applyFilters" class="btn-primary">Aplicar Filtros</button>
+        <button id="clearFilters" class="btn-secondary">Limpar</button>
+    </div>
+</aside>
+
+<!-- Overlay para fechar menus -->
+<div id="overlay" class="overlay"></div>
+
+<!-- Container do mapa -->
+<div class="map-container">
+    <div id="map"></div>
+</div>
+
+<!-- Leaflet CSS -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+
+<!-- Leaflet JavaScript -->
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+<script>
+// Dados dos estabelecimentos
+const estabelecimentos = {{{estabelecimentos}}};
+let mapInstance;
+let markers = [];
+
+// Inicializar mapa
+function initMap() {
+    console.log('Inicializando mapa com Leaflet...');
+    
+    // Verificar se Leaflet está carregado
+    if (typeof L === 'undefined') {
+        console.error('Leaflet não carregado');
+        setTimeout(initMap, 100);
+        return;
+    }
+    
+    // Criar mapa
+    mapInstance = L.map('map').setView([-23.5505, -46.6333], 13);
+    
+    // Adicionar camada de tiles (OpenStreetMap - GRATUITO)
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© OpenStreetMap contributors'
+    }).addTo(mapInstance);
+    
+    // Adicionar marcadores dos estabelecimentos
+    addEstablishmentMarkers();
+    
+    // Configurar eventos
+    setupMapEvents();
+    
+    console.log('Mapa inicializado com sucesso!');
+}
+
+// Adicionar marcadores dos estabelecimentos
+function addEstablishmentMarkers() {
+    if (!estabelecimentos || estabelecimentos.length === 0) {
+        console.log('Nenhum estabelecimento encontrado');
+        return;
+    }
+    
+    estabelecimentos.forEach(est => {
+        if (est.localizacao && est.localizacao.coordinates) {
+            const [lng, lat] = est.localizacao.coordinates;
+            
+            // Criar marcador
+            const marker = L.marker([lat, lng]).addTo(mapInstance);
+            
+            // Adicionar popup
+            const popupContent = `
+                <div class="marker-popup">
+                    <h4>${est.nome}</h4>
+                    <p><strong>Endereço:</strong> ${est.enderecoCompleto}</p>
+                    <p><strong>Telefone:</strong> ${est.telefone}</p>
+                    <p><strong>Tipo:</strong> ${est.tipo}</p>
+                    <div class="popup-actions">
+                        <a href="/local/${est._id}" class="btn btn-primary">Ver Detalhes</a>
+                        <a href="tel:${est.telefone}" class="btn btn-secondary">Ligar</a>
+                    </div>
+                </div>
+            `;
+            
+            marker.bindPopup(popupContent);
+            markers.push(marker);
+        }
+    });
+    
+    console.log(`${markers.length} marcadores adicionados ao mapa`);
+}
+
+// Configurar eventos do mapa
+function setupMapEvents() {
+    // Menu lateral esquerdo
+    const menuToggle = document.getElementById('menuToggle');
+    const leftMenu = document.getElementById('leftMenu');
+    const closeLeftMenu = document.getElementById('closeLeftMenu');
+    
+    if (menuToggle) {
+        menuToggle.addEventListener('click', () => {
+            leftMenu.classList.add('show');
+            document.getElementById('overlay').classList.add('show');
+        });
+    }
+    
+    if (closeLeftMenu) {
+        closeLeftMenu.addEventListener('click', () => {
+            leftMenu.classList.remove('show');
+            document.getElementById('overlay').classList.remove('show');
+        });
+    }
+    
+    // Menu de filtros
+    const filterToggle = document.getElementById('filterToggle');
+    const filterMenu = document.getElementById('filterMenu');
+    const closeFilterMenu = document.getElementById('closeFilterMenu');
+    
+    if (filterToggle) {
+        filterToggle.addEventListener('click', () => {
+            filterMenu.classList.add('show');
+            document.getElementById('overlay').classList.add('show');
+        });
+    }
+    
+    if (closeFilterMenu) {
+        closeFilterMenu.addEventListener('click', () => {
+            filterMenu.classList.remove('show');
+            document.getElementById('overlay').classList.remove('show');
+        });
+    }
+    
+    // Overlay para fechar menus
+    const overlay = document.getElementById('overlay');
+    if (overlay) {
+        overlay.addEventListener('click', () => {
+            leftMenu.classList.remove('show');
+            filterMenu.classList.remove('show');
+            overlay.classList.remove('show');
+        });
+    }
+    
+    // Busca
+    const searchInput = document.getElementById('searchInput');
+    if (searchInput) {
+        searchInput.addEventListener('input', performSearch);
+    }
+    
+    // Aplicar filtros
+    const applyFilters = document.getElementById('applyFilters');
+    const clearFilters = document.getElementById('clearFilters');
+    
+    if (applyFilters) {
+        applyFilters.addEventListener('click', applyFiltersToMap);
+    }
+    
+    if (clearFilters) {
+        clearFilters.addEventListener('click', clearAllFilters);
+    }
+    
+    // Carregar opções de filtros
+    loadFilterOptions();
+}
+
+// Realizar busca
+function performSearch() {
+    const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+    
+    markers.forEach(marker => {
+        const popup = marker.getPopup();
+        const content = popup.getContent().toLowerCase();
+        
+        if (content.includes(searchTerm)) {
+            marker.openPopup();
+        }
+    });
+}
+
+// Aplicar filtros
+function applyFiltersToMap() {
+    console.log('Aplicando filtros...');
+    
+    // Coletar filtros selecionados
+    const especialidades = Array.from(document.querySelectorAll('input[name="especialidade"]:checked')).map(cb => cb.value);
+    const convenios = Array.from(document.querySelectorAll('input[name="convenio"]:checked')).map(cb => cb.value);
+    const tipos = Array.from(document.querySelectorAll('input[name="tipo"]:checked')).map(cb => cb.value);
+    
+    // Filtrar marcadores
+    markers.forEach(marker => {
+        const popup = marker.getPopup();
+        const content = popup.getContent().toLowerCase();
+        let show = true;
+        
+        // Filtrar por especialidades
+        if (especialidades.length > 0) {
+            const hasEspecialidade = especialidades.some(esp => content.includes(esp.toLowerCase()));
+            if (!hasEspecialidade) show = false;
+        }
+        
+        // Filtrar por convênios
+        if (convenios.length > 0) {
+            const hasConvenio = convenios.some(conv => content.includes(conv.toLowerCase()));
+            if (!hasConvenio) show = false;
+        }
+        
+        // Filtrar por tipos
+        if (tipos.length > 0) {
+            const hasTipo = tipos.some(tipo => content.includes(tipo.toLowerCase()));
+            if (!hasTipo) show = false;
+        }
+        
+        // Mostrar/ocultar marcador
+        if (show) {
+            marker.addTo(mapInstance);
+        } else {
+            marker.remove();
+        }
+    });
+    
+    // Fechar menu de filtros
+    document.getElementById('filterMenu').classList.remove('show');
+    document.getElementById('overlay').classList.remove('show');
+}
+
+// Limpar filtros
+function clearAllFilters() {
+    document.getElementById('searchInput').value = '';
+    
+    // Desmarcar todos os checkboxes
+    document.querySelectorAll('input[type="checkbox"]').forEach(cb => cb.checked = false);
+    
+    // Mostrar todos os marcadores
+    markers.forEach(marker => {
+        marker.addTo(mapInstance);
+    });
+    
+    console.log('Filtros limpos');
+}
+
+// Carregar opções de filtros
+function loadFilterOptions() {
+    // Especialidades
+    const especialidades = ['Cardiologia', 'Pediatria', 'Ortopedia', 'Clínica Geral', 'Traumatologia'];
+    populateFilterOptions('especialidadesList', especialidades, 'especialidade');
+    
+    // Convênios
+    const convenios = ['SUS', 'Unimed', 'Bradesco Saúde', 'Amil', 'SulAmérica'];
+    populateFilterOptions('conveniosList', convenios, 'convenio');
+    
+    // Tipos
+    const tipos = ['clinica', 'orgao_publico'];
+    populateFilterOptions('tiposList', tipos, 'tipo');
+}
+
+// Popular opções de filtros
+function populateFilterOptions(containerId, options, filterType) {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+    
+    container.innerHTML = '';
+    
+    options.forEach(option => {
+        const label = document.createElement('label');
+        label.className = 'filter-option';
+        label.innerHTML = `
+            <input type="checkbox" name="${filterType}" value="${option}">
+            <span>${option}</span>
+        `;
+        container.appendChild(label);
+    });
+}
+
+// Inicializar quando a página carregar
+document.addEventListener('DOMContentLoaded', () => {
+    // Aguardar Leaflet carregar
+    setTimeout(initMap, 500);
+});
+</script>
+
+<style>
+/* Reset e base */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    overflow: hidden;
+}
+
+/* Header moderno */
+.modern-header {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 60px;
+    background: white;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    display: flex;
+    align-items: center;
+    padding: 0 20px;
+    z-index: 1000;
+    gap: 20px;
+}
+
+.left-menu, .right-menu {
+    display: flex;
+    align-items: center;
+}
+
+.menu-btn, .filter-btn {
+    background: none;
+    border: none;
+    font-size: 20px;
+    color: #666;
+    cursor: pointer;
+    padding: 10px;
+    border-radius: 50%;
+    transition: all 0.3s ease;
+}
+
+.menu-btn:hover, .filter-btn:hover {
+    background: #f5f5f5;
+    color: #333;
+}
+
+.logo-container {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex: 1;
+    justify-content: center;
+}
+
+.logo {
+    width: 40px;
+    height: 40px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 20px;
+}
+
+.logo-text {
+    font-size: 24px;
+    font-weight: 700;
+    color: #333;
+}
+
+.search-container {
+    flex: 1;
+    max-width: 500px;
+}
+
+.search-box {
+    position: relative;
+    background: #f8f9fa;
+    border-radius: 25px;
+    padding: 10px 20px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    border: 2px solid transparent;
+    transition: all 0.3s ease;
+}
+
+.search-box:focus-within {
+    border-color: #007bff;
+    background: white;
+    box-shadow: 0 2px 10px rgba(0,123,255,0.2);
+}
+
+.search-box i {
+    color: #666;
+    font-size: 16px;
+}
+
+.search-box input {
+    border: none;
+    background: none;
+    outline: none;
+    flex: 1;
+    font-size: 16px;
+    color: #333;
+}
+
+.search-box input::placeholder {
+    color: #999;
+}
+
+/* Menu lateral esquerdo */
+.left-menu-panel {
+    position: fixed;
+    top: 0;
+    left: -300px;
+    width: 300px;
+    height: 100vh;
+    background: white;
+    box-shadow: 2px 0 10px rgba(0,0,0,0.1);
+    transition: left 0.3s ease;
+    z-index: 1001;
+}
+
+.left-menu-panel.show {
+    left: 0;
+}
+
+.menu-header {
+    padding: 20px;
+    border-bottom: 1px solid #eee;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.menu-header h3 {
+    color: #333;
+    font-size: 20px;
+}
+
+.close-btn {
+    background: none;
+    border: none;
+    font-size: 24px;
+    color: #666;
+    cursor: pointer;
+    padding: 5px;
+    border-radius: 50%;
+    transition: all 0.3s ease;
+}
+
+.close-btn:hover {
+    background: #f5f5f5;
+    color: #333;
+}
+
+.menu-content {
+    padding: 20px 0;
+}
+
+.menu-item {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    padding: 15px 20px;
+    color: #666;
+    text-decoration: none;
+    transition: all 0.3s ease;
+    border-left: 3px solid transparent;
+}
+
+.menu-item:hover {
+    background: #f8f9fa;
+    color: #333;
+}
+
+.menu-item.active {
+    background: #e3f2fd;
+    color: #007bff;
+    border-left-color: #007bff;
+}
+
+.menu-item i {
+    width: 20px;
+    text-align: center;
+}
+
+/* Menu de filtros */
+.filter-panel {
+    position: fixed;
+    top: 0;
+    right: -400px;
+    width: 400px;
+    height: 100vh;
+    background: white;
+    box-shadow: -2px 0 10px rgba(0,0,0,0.1);
+    transition: right 0.3s ease;
+    z-index: 1001;
+    display: flex;
+    flex-direction: column;
+}
+
+.filter-panel.show {
+    right: 0;
+}
+
+.filter-header {
+    padding: 20px;
+    border-bottom: 1px solid #eee;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.filter-header h3 {
+    color: #333;
+    font-size: 20px;
+}
+
+.filter-content {
+    flex: 1;
+    padding: 20px;
+    overflow-y: auto;
+}
+
+.filter-section {
+    margin-bottom: 30px;
+}
+
+.filter-section h4 {
+    color: #333;
+    margin-bottom: 15px;
+    font-size: 16px;
+}
+
+.filter-options {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.filter-option {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px;
+    border-radius: 8px;
+    transition: all 0.3s ease;
+    cursor: pointer;
+}
+
+.filter-option:hover {
+    background: #f8f9fa;
+}
+
+.filter-option input[type="checkbox"] {
+    margin: 0;
+}
+
+.filter-actions {
+    padding: 20px;
+    border-top: 1px solid #eee;
+    display: flex;
+    gap: 10px;
+}
+
+.btn {
+    padding: 12px 24px;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 500;
+    transition: all 0.3s ease;
+    flex: 1;
+}
+
+.btn-primary {
+    background: #007bff;
+    color: white;
+}
+
+.btn-primary:hover {
+    background: #0056b3;
+}
+
+.btn-secondary {
+    background: #6c757d;
+    color: white;
+}
+
+.btn-secondary:hover {
+    background: #5a6268;
+}
+
+/* Overlay */
+.overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0,0,0,0.5);
+    z-index: 999;
+    opacity: 0;
+    visibility: hidden;
+    transition: all 0.3s ease;
+}
+
+.overlay.show {
+    opacity: 1;
+    visibility: visible;
+}
+
+/* Container do mapa */
+.map-container {
+    position: fixed;
+    top: 60px;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 1;
+    width: 100vw;
+    height: calc(100vh - 60px);
+}
+
+#map {
+    width: 100%;
+    height: 100%;
+    position: absolute;
+    top: 0;
+    left: 0;
+}
+
+/* Popup do marcador */
+.marker-popup {
+    min-width: 250px;
+}
+
+.marker-popup h4 {
+    margin: 0 0 10px 0;
+    color: #007bff;
+    font-size: 18px;
+}
+
+.marker-popup p {
+    margin: 5px 0;
+    color: #666;
+    font-size: 14px;
+}
+
+.popup-actions {
+    margin-top: 15px;
+    display: flex;
+    gap: 10px;
+}
+
+.popup-actions .btn {
+    padding: 8px 16px;
+    font-size: 12px;
+    flex: 1;
+}
+
+/* Responsivo */
+@media (max-width: 768px) {
+    .modern-header {
+        padding: 0 15px;
+        gap: 10px;
+    }
+    
+    .logo-text {
+        font-size: 20px;
+    }
+    
+    .search-container {
+        max-width: 200px;
+    }
+    
+    .search-box input {
+        font-size: 14px;
+    }
+    
+    .left-menu-panel {
+        width: 100%;
+        left: -100%;
+    }
+    
+    .filter-panel {
+        width: 100%;
+        right: -100%;
+    }
+    
+    .map-container {
+        top: 60px;
+    }
+}
+
+@media (max-width: 480px) {
+    .modern-header {
+        height: 50px;
+        padding: 0 10px;
+    }
+    
+    .logo {
+        width: 35px;
+        height: 35px;
+        font-size: 18px;
+    }
+    
+    .logo-text {
+        font-size: 18px;
+    }
+    
+    .search-container {
+        max-width: 150px;
+    }
+    
+    .search-box {
+        padding: 8px 15px;
+    }
+    
+    .search-box input {
+        font-size: 12px;
+    }
+    
+    .map-container {
+        top: 50px;
+    }
+}
+</style>

@@ -1,0 +1,43 @@
+{
+  "name": "conecta-med",
+  "version": "1.0.0",
+  "description": "Plataforma de geolocalização de serviços de saúde",
+  "main": "app.js",
+  "scripts": {
+    "start": "node app.js",
+    "dev": "nodemon app.js",
+    "build": "npm install",
+    "seed": "node scripts/seed.js",
+    "cap:init": "npx cap init",
+    "cap:add:android": "npx cap add android",
+    "cap:sync": "npx cap sync",
+    "cap:open:android": "npx cap open android"
+  },
+  "keywords": ["saúde", "geolocalização", "mapas", "clínicas", "médicos"],
+  "author": "ConectaMed Team",
+  "license": "MIT",
+  "dependencies": {
+    "express": "^4.18.2",
+    "express-session": "^1.17.3",
+    "express-handlebars": "^7.1.2",
+    "mongoose": "^7.5.0",
+    "bcryptjs": "^2.4.3",
+    "dotenv": "^16.3.1",
+    "axios": "^1.5.0",
+    "multer": "^1.4.5-lts.1",
+    "cors": "^2.8.5",
+    "helmet": "^7.0.0",
+    "express-rate-limit": "^6.10.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.1",
+    "@capacitor/cli": "^5.4.0",
+    "@capacitor/core": "^5.4.0",
+    "@capacitor/android": "^5.4.0"
+  },
+  "engines": {
+    "node": ">=16.0.0"
+  }
+}
+
+
