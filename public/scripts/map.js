@@ -39,26 +39,6 @@ function initLeafletMap() {
     }).addTo(mapInstance);
 
     markersLayer = L.layerGroup().addTo(mapInstance);
-
-    // Evento: Ao terminar de mover ou dar zoom no mapa, buscar na nova área
-    mapInstance.on('moveend', () => {
-        // Evita disparar se o movimento foi programático (pelo fitBounds)
-        if (isProgrammaticMove) {
-            isProgrammaticMove = false;
-            return;
-        }
-
-        const center = mapInstance.getCenter();
-        
-        const newFilters = {
-            ...lastFilters,
-            lat: center.lat,
-            lng: center.lng
-        };
-        
-        // FALSE aqui impede o fitBounds
-        fetchAndRenderEstablishments(newFilters, false);
-    });
 }
 
 async function fetchAndRenderEstablishments(filters = {}, shouldFitBounds = true) {
@@ -141,19 +121,28 @@ function renderMarkers(establishments, shouldFitBounds = true) {
 }
 
 function createMarkerIcon(tipo = 'clinica') {
-    const label = tipo === 'orgao_publico' ? 'O' : 'C';
+    let iconClass, bgClass;
+
+    if (tipo === 'orgao_publico') {
+        iconClass = 'fa-hospital'; // Ícone de hospital para órgãos públicos
+        bgClass = 'orgao_publico';
+    } else {
+        iconClass = 'fa-house-medical'; // Ícone de clínica médica
+        bgClass = 'clinica';
+    }
+
     return L.divIcon({
-        html: `<span>${label}</span>`,
-        className: `custom-marker ${tipo}`,
-        iconSize: [32, 32],
-        iconAnchor: [16, 16]
+        html: `<i class="fas ${iconClass}"></i>`,
+        className: `custom-marker ${bgClass}`,
+        iconSize: [40, 40], // Tamanho deve bater com o CSS
+        iconAnchor: [20, 20], // Ponto de ancoragem no centro
+        popupAnchor: [0, -20] // Popup aparece um pouco acima
     });
 }
 
 function createPopupContent(est) {
-    // No formato atual da API ainda não recebemos as avaliações agregadas aqui,
-    // então exibimos "N/D" por padrão.
-    const rating = 'N/D';
+    // Garante que nota média tenha um valor padrão
+    const rating = est.notaMedia || 'N/D';
 
     return `
         <div class="marker-popup">
@@ -167,9 +156,9 @@ function createPopupContent(est) {
                 <button class="btn btn-primary" onclick="openDirections('${est.id}')">
                     <i class="fas fa-route"></i> Rota
                 </button>
-                <a class="btn btn-secondary" href="/local/${est.id}">
+                <button class="btn btn-secondary" onclick="showEstablishmentModal('${est.id}')">
                     <i class="fas fa-info-circle"></i> Detalhes
-                </a>
+                </button>
             </div>
         </div>
     `;
@@ -311,14 +300,21 @@ function addUserMarker(location) {
         userMarker.removeFrom(mapInstance);
     }
 
-    userMarker = L.circleMarker([location.lat, location.lng], {
-        radius: 8,
-        color: '#dc2626',
-        fillColor: '#dc2626',
-        fillOpacity: 0.8,
-        weight: 2
+    // Ícone personalizado para o usuário
+    const userIcon = L.divIcon({
+        html: '<i class="fas fa-user"></i>',
+        className: 'custom-marker user',
+        iconSize: [40, 40],
+        iconAnchor: [20, 20],
+        popupAnchor: [0, -20]
+    });
+
+    userMarker = L.marker([location.lat, location.lng], {
+        icon: userIcon,
+        zIndexOffset: 1000 // Garante que o usuário fique sempre por cima
     }).addTo(mapInstance);
-    userMarker.bindPopup('Você está aqui').openPopup();
+
+    userMarker.bindPopup('<strong>Você está aqui</strong>').openPopup();
 }
 
 function buildQueryParams(filters = {}) {
@@ -354,7 +350,7 @@ function appendArrayParam(params, key, values) {
 }
 
 function extractCoordinates(filters) {
-    // 1. Se os filtros já têm lat/lng explícitos (vindos do evento moveend ou input), usa eles
+    // 1. Se vierem coordenadas explícitas nos filtros, usa elas
     if (filters.lat && filters.lng) {
         return {
             lat: filters.lat,
@@ -362,7 +358,12 @@ function extractCoordinates(filters) {
         };
     }
     
-    // 2. Se o mapa já está carregado, usa o centro visual dele
+    // 2. REGRA DE OURO: Se temos a localização do usuário, o raio é baseado nela!
+    if (userLocation) {
+        return userLocation;
+    }
+
+    // 3. Apenas se o usuário negou GPS ou não temos a localização, usamos o centro do mapa como fallback
     if (mapInstance) {
         const center = mapInstance.getCenter();
         return {
@@ -370,19 +371,19 @@ function extractCoordinates(filters) {
             lng: center.lng
         };
     }
-
-    // 3. Fallback para a localização do GPS do usuário
-    if (userLocation) {
-        return userLocation;
-    }
     
     return null;
 }
 
 function setupResultsPanel() {
-    const closeBtn = document.getElementById('resultsClose');
-    if (closeBtn) {
-        closeBtn.addEventListener('click', () => toggleResultsPanel(false));
+    const toggleBtn = document.getElementById('panelToggle');
+    const panel = document.getElementById('resultsPanel');
+
+    if (toggleBtn && panel) {
+        toggleBtn.addEventListener('click', () => {
+            // Alterna a classe minimized
+            panel.classList.toggle('minimized');
+        });
     }
 }
 
@@ -399,8 +400,12 @@ function toggleResultsPanel(show) {
     if (!panel) return;
 
     if (show) {
+        // Mostra o painel
         panel.classList.add('show');
+        // Garante que ele apareça maximizado (aberto) quando novos resultados chegam
+        panel.classList.remove('minimized'); 
     } else {
+        // Esconde completamente (usado raramente agora, talvez ao limpar filtros)
         panel.classList.remove('show');
     }
 }
