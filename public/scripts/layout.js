@@ -422,26 +422,24 @@ document.addEventListener('DOMContentLoaded', function() {
     function closeAllMenus() {
         const sideMenu = document.getElementById('sideMenu');
         const filterMenu = document.getElementById('filterMenu');
-        const sideMenuBtn = document.getElementById('sideMenuBtn');
-        const filterMenuBtn = document.getElementById('filterMenuBtn');
+        const sideMenuBtn = document.getElementById('menuBtn');
+        const filterOverlay = document.getElementById('filterOverlay');
         
         if (sideMenu) sideMenu.classList.remove('open');
         if (filterMenu) filterMenu.classList.remove('open');
+        if (filterOverlay) filterOverlay.classList.remove('show');
         
-        // Remover classes de animação dos botões
         if (sideMenuBtn) {
             sideMenuBtn.classList.remove('menu-open');
-        }
-        if (filterMenuBtn) {
-            filterMenuBtn.classList.remove('filter-open');
         }
     }
     
     // Event listeners para os botões dos menus
-    const sideMenuBtn = document.getElementById('sideMenuBtn');
-    const filterMenuBtn = document.getElementById('filterMenuBtn');
+    const sideMenuBtn = document.getElementById('menuBtn');
+    const filterBtnElement = document.getElementById('filterBtn');
     const sideMenu = document.getElementById('sideMenu');
     const filterMenu = document.getElementById('filterMenu');
+    const filterOverlay = document.getElementById('filterOverlay');
     
     if (sideMenuBtn && sideMenu) {
         sideMenuBtn.addEventListener('click', function(e) {
@@ -451,9 +449,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 // No mobile, fechar o outro menu se estiver aberto
                 if (filterMenu && filterMenu.classList.contains('open')) {
                     filterMenu.classList.remove('open');
-                    if (filterMenuBtn) {
-                        filterMenuBtn.classList.remove('filter-open');
-                    }
+                    filterOverlay?.classList.remove('show');
                 }
             }
             
@@ -463,31 +459,11 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
     
-    if (filterMenuBtn && filterMenu) {
-        filterMenuBtn.addEventListener('click', function(e) {
-            e.preventDefault();
-            
-            if (isMobile()) {
-                // No mobile, fechar o outro menu se estiver aberto
-                if (sideMenu && sideMenu.classList.contains('open')) {
-                    sideMenu.classList.remove('open');
-                    if (sideMenuBtn) {
-                        sideMenuBtn.classList.remove('menu-open');
-                    }
-                }
-            }
-            
-            // Toggle do menu de filtros
-            filterMenu.classList.toggle('open');
-            filterMenuBtn.classList.toggle('filter-open');
-        });
-    }
-    
     // Fechar menus ao clicar fora deles
     document.addEventListener('click', function(e) {
         if (isMobile()) {
             const isClickInsideMenu = sideMenu?.contains(e.target) || filterMenu?.contains(e.target);
-            const isClickOnMenuBtn = sideMenuBtn?.contains(e.target) || filterMenuBtn?.contains(e.target);
+            const isClickOnMenuBtn = sideMenuBtn?.contains(e.target) || filterBtnElement?.contains(e.target);
             
             if (!isClickInsideMenu && !isClickOnMenuBtn) {
                 closeAllMenus();

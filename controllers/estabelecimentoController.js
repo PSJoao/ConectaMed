@@ -2,6 +2,20 @@ const Estabelecimento = require('../models/Estabelecimento');
 const Medico = require('../models/Medico');
 const googleMapsService = require('../services/GoogleMapsService');
 
+const normalizeToArray = (value) => {
+  if (!value) return [];
+  if (Array.isArray(value)) {
+    return value.filter(Boolean);
+  }
+  if (typeof value === 'string') {
+    return value
+      .split(',')
+      .map(item => item.trim())
+      .filter(Boolean);
+  }
+  return [];
+};
+
 const estabelecimentoController = {
   // Buscar estabelecimentos com filtros
   async buscarEstabelecimentos(req, res) {
@@ -16,30 +30,62 @@ const estabelecimentoController = {
         raio = 10 
       } = req.query;
 
-      let query = { ativo: true };
+      const tiposFiltro = normalizeToArray(tipo).filter(t => ['clinica', 'orgao_publico'].includes(t));
+      const especialidadesFiltro = normalizeToArray(especialidade);
+      const conveniosFiltro = normalizeToArray(convenio);
 
-      // Filtro por tipo
-      if (tipo && ['clinica', 'orgao_publico'].includes(tipo)) {
-        query.tipo = tipo;
+      const andConditions = [];
+
+      if (tiposFiltro.length) {
+        andConditions.push({ tipo: { $in: tiposFiltro } });
       }
 
-      // Filtro por especialidade (buscar médicos com essa especialidade)
-      if (especialidade) {
+      if (especialidadesFiltro.length) {
         const medicosComEspecialidade = await Medico.find({
-          especialidades: { $in: [especialidade] },
+          especialidades: { $in: especialidadesFiltro },
           ativo: true
         }).select('estabelecimento');
-        
-        const estabelecimentosIds = medicosComEspecialidade.map(m => m.estabelecimento);
-        query._id = { $in: estabelecimentosIds };
+
+        const estabelecimentosIds = medicosComEspecialidade
+          .map(m => m.estabelecimento)
+          .filter(Boolean);
+
+        andConditions.push({ _id: { $in: estabelecimentosIds } });
       }
 
-      // Filtro por convênio
-      if (convenio) {
-        query.$or = [
-          { conveniosGerais: { $in: [convenio] } },
-          { 'medicos.conveniosAceitos': { $in: [convenio] } }
-        ];
+      if (conveniosFiltro.length) {
+        const medicosComConvenio = await Medico.find({
+          conveniosAceitos: { $in: conveniosFiltro },
+          ativo: true
+        }).select('estabelecimento');
+
+        const estabelecimentosConvenio = medicosComConvenio
+          .map(m => m.estabelecimento)
+          .filter(Boolean);
+
+        andConditions.push({
+          $or: [
+            { conveniosGerais: { $in: conveniosFiltro } },
+            { _id: { $in: estabelecimentosConvenio } }
+          ]
+        });
+      }
+
+      if (search) {
+        const searchRegex = new RegExp(search, 'i');
+        andConditions.push({
+          $or: [
+            { nome: searchRegex },
+            { enderecoCompleto: searchRegex },
+            { descricao: searchRegex }
+          ]
+        });
+      }
+
+      let query = { ativo: true };
+
+      if (andConditions.length) {
+        query.$and = andConditions;
       }
 
       let estabelecimentos;
@@ -50,7 +96,6 @@ const estabelecimentoController = {
         const longitude = parseFloat(lng);
         const raioKm = parseFloat(raio);
 
-        // Query de proximidade
         const geoQuery = {
           ...query,
           localizacao: {
@@ -59,7 +104,7 @@ const estabelecimentoController = {
                 type: 'Point',
                 coordinates: [longitude, latitude]
               },
-              $maxDistance: raioKm * 1000 // Converter km para metros
+              $maxDistance: raioKm * 1000
             }
           }
         };
@@ -68,28 +113,7 @@ const estabelecimentoController = {
           .populate('medicos', 'nome especialidades conveniosAceitos')
           .populate('admin', 'nome email')
           .limit(50);
-
-        // Se há busca textual, filtrar os resultados
-        if (search && estabelecimentos.length > 0) {
-          const searchRegex = new RegExp(search, 'i');
-          estabelecimentos = estabelecimentos.filter(est => 
-            searchRegex.test(est.nome) || 
-            searchRegex.test(est.enderecoCompleto) || 
-            searchRegex.test(est.descricao || '')
-          );
-        }
       } else {
-        // Query sem proximidade
-        if (search) {
-          // Usar regex para busca textual quando não há coordenadas
-          const searchRegex = new RegExp(search, 'i');
-          query.$or = [
-            { nome: searchRegex },
-            { enderecoCompleto: searchRegex },
-            { descricao: searchRegex }
-          ];
-        }
-
         estabelecimentos = await Estabelecimento.find(query)
           .populate('medicos', 'nome especialidades conveniosAceitos')
           .populate('admin', 'nome email')

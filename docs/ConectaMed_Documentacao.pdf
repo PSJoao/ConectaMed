@@ -1,0 +1,157 @@
+%PDF-1.4
+1 0 obj
+<< /Type /Catalog /Pages 2 0 R >>
+endobj
+2 0 obj
+<< /Type /Pages /Kids [3 0 R] /Count 1 >>
+endobj
+3 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Contents 4 0 R /Resources << /Font << /F1 5 0 R >> >> >>
+endobj
+4 0 obj
+<< /Length 7498 >>
+stream
+BT
+/F1 11 Tf
+16 TL
+50 780 Td
+(CONECTAMED - DOCUMENTAÇÃO FUNCIONAL) Tj
+T*
+( ) Tj
+T*
+(1. Contexto e Objetivo) Tj
+T*
+(ConectaMed é uma plataforma web destinada a aproximar pacientes de serviços de saúde próximos, unificando informações sobre clínicas privadas, órgãos públicos, especialidades médicas, convênios aceitos e profissionais responsáveis. O objetivo principal é permitir que um usuário não técnico encontre estabelecimentos de confiança em poucos cliques, visualizando-os em um mapa responsivo e aplicando filtros de acordo com suas necessidades específicas.) Tj
+T*
+( ) Tj
+T*
+(2. Público-Alvo) Tj
+T*
+(A solução atende três grupos principais: pacientes que desejam localizar atendimento médico com rapidez, administradores de clínicas que precisam manter os dados institucionais atualizados e gestores de órgãos públicos que buscam transparência e organização das unidades de saúde. Todos navegam pela mesma base de dados, diferenciando-se pelos níveis de permissão e pelos módulos administrativos.) Tj
+T*
+( ) Tj
+T*
+(3. Visão Funcional do Produto) Tj
+T*
+(3.1 Localização Inteligente) Tj
+T*
+(O usuário concede ou não acesso à sua geolocalização. Caso a permissão seja fornecida, o sistema centraliza o mapa em sua posição e prioriza resultados próximos. Em cenários sem permissão, a interface assume São Paulo como referência inicial, permitindo navegação manual.) Tj
+T*
+(3.2 Consulta Detalhada) Tj
+T*
+(Cada estabelecimento possui ficha própria com endereço completo, telefone, horário de funcionamento, descrição institucional, especialidades oferecidas, convênios aceitos e equipe médica. Os dados são armazenados no MongoDB e expostos por meio de templates Handlebars.) Tj
+T*
+(3.3 Sistema de Filtros) Tj
+T*
+(Os filtros combinam busca textual, especialidades, convênios, tipo de estabelecimento e raio máximo. A aplicação aceita múltiplos valores por filtro, garantindo que o usuário refine gradualmente o resultado. As solicitações são transformadas em consultas geoespaciais e textuais no backend.) Tj
+T*
+(3.4 Painel em Mapa) Tj
+T*
+(O mapa full-screen foi implementado com Leaflet e OpenStreetMap, eliminando custos com licenciamento proprietário. Os marcadores trazem pop-ups rápidos com atalhos para detalhes, ligação telefônica e abertura de rotas em serviços externos. Um painel lateral lista os mesmos resultados em formato de cartão para facilitar leitura sequencial.) Tj
+T*
+(3.5 Gestão de Estabelecimentos) Tj
+T*
+(Administradores autenticados podem cadastrar ou atualizar dados de sua unidade, inclusive médicos e convênios. O processo utiliza sessões com express-session e bcrypt para proteção de credenciais. Cada administrador responde por um estabelecimento ativo.) Tj
+T*
+(3.6 Favoritos e Experiência do Paciente) Tj
+T*
+(Pacientes autenticados podem favoritar unidades de interesse, acessando-as rapidamente em visitas futuras. O sistema armazena avaliações simples para cálculo de nota média exibida nos pop-ups.) Tj
+T*
+( ) Tj
+T*
+(4. Arquitetura Técnica) Tj
+T*
+(4.1 Backend) Tj
+T*
+(Construído em Node.js com Express, com camadas claras de rotas, controllers, models e serviços. O MongoDB é acessado via Mongoose e utiliza índices 2dsphere para buscas geoespaciais. Helmet, CORS configurado e express-rate-limit reduzem vetores de ataque comuns.) Tj
+T*
+(4.2 Frontend) Tj
+T*
+(O layout utiliza Handlebars com um template principal e parciais para cabeçalho, modais e menu de filtros. Os estilos são centralizados em CSS com foco em responsividade e modo de tela cheia. A camada de interação usa JavaScript vanilla organizado em arquivos especializados \(map.js, filters.js, layout.js, modals.js\).) Tj
+T*
+(4.3 Integrações Externas) Tj
+T*
+(Leaflet consome tiles do OpenStreetMap através de requisições HTTPS. Para geocodificação e cálculo de direções no módulo administrativo permanecem helpers para Google Maps, garantindo compatibilidade com rotinas existentes.) Tj
+T*
+( ) Tj
+T*
+(5. Fluxo do Usuário) Tj
+T*
+(Passo 1: o visitante acessa a página inicial, visualiza o mapa e decide usar a barra de busca ou abrir filtros.) Tj
+T*
+(Passo 2: a aplicação tenta obter a localização atual e recalcula o raio padrão \(10 km\). Caso negado, mantém o centro padrão.) Tj
+T*
+(Passo 3: filtros selecionados são enviados ao endpoint /api/estabelecimentos. A resposta alimenta os marcadores Leaflet e o painel lateral.) Tj
+T*
+(Passo 4: ao clicar em um marcador, o usuário pode abrir detalhes, ligar diretamente ou gerar rota externa em uma nova aba.) Tj
+T*
+(Passo 5: logins e cadastros ocorrem por meio de modais que sobrepõem o mapa, preservando o contexto visual.) Tj
+T*
+( ) Tj
+T*
+(6. Estrutura de Pastas) Tj
+T*
+(/config contém conexão com banco e middlewares.) Tj
+T*
+(/controllers agrupa a lógica de domínio, como estabelecimentoController e medicoController.) Tj
+T*
+(/models possui os schemas Mongoose \(Estabelecimento, Medico, Usuario\).) Tj
+T*
+(/routes separa rotas públicas, administrativas e APIs REST.) Tj
+T*
+(/services concentra integrações externas, como GoogleMapsService.) Tj
+T*
+(/views guarda os templates Handlebars e layouts.) Tj
+T*
+(/public disponibiliza assets estáticos \(CSS, JS, imagens\).) Tj
+T*
+(/scripts reúne utilitários adicionais do projeto.) Tj
+T*
+( ) Tj
+T*
+(7. Modelo de Dados Essencial) Tj
+T*
+(Estabelecimento registra nome, CNPJ, endereço completo, telefone, descrição, tipo \(clinica ou orgao_publico\), conveniosGerais, localizacao \(Point com latitude e longitude\), lista de médicos, avaliações e vínculo com o administrador. O schema define índices textuais e geoespaciais para garantir desempenho. Médicos armazenam especialidades e convênios aceitos, permitindo filtros cruzados.) Tj
+T*
+( ) Tj
+T*
+(8. Segurança e Conformidade) Tj
+T*
+(Helmet impõe Content Security Policy restritiva alinhada ao uso do Leaflet. Sessões HTTP são protegidas com cookies seguros em produção e segredos definidos por ambiente. O rate limiting mitiga brute force em endpoints públicos. Inputs que alimentam buscas são validados e convertidos antes de chegar ao banco. A perspectiva de LGPD é atendida ao evitar armazenamento de dados sensíveis de pacientes, focando em informações institucionais públicas.) Tj
+T*
+( ) Tj
+T*
+(9. Implantação e Operação) Tj
+T*
+(Ambiente sugerido: Node 16+, MongoDB Atlas ou instância local. O processo típico envolve instalar dependências, configurar variáveis \(.env com MONGODB_URI, SESSION_SECRET, PORT\), executar scripts de seed e iniciar com npm run dev. Para produção recomenda-se npm start após build, com reverse proxy garantindo HTTPS. Capacitor está pré-configurado para empacotar o front-end em aplicações móveis Android quando necessário.) Tj
+T*
+( ) Tj
+T*
+(10. Roadmap Sugerido) Tj
+T*
+(Adicionar autenticação federada opcional para pacientes, ampliar filtros com disponibilidade em tempo real, incluir camadas de heatmap por especialidade e implementar notificações push via Capacitor. Outras frentes incluem dashboards administrativos e relatórios exportáveis.) Tj
+T*
+( ) Tj
+T*
+(11. Referências Operacionais) Tj
+T*
+(Documentos complementares residem no repositório \(README.md e Planejamento Completo-2.pdf\). As decisões de UX priorizam navegação em tela única e tempo de resposta inferior a dois segundos para consultas típicas. O projeto permanece modular, permitindo troca do provedor de mapas ou de banco de dados com impacto controlado.) Tj
+ET
+endstream
+endobj
+5 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>
+endobj
+xref
+0 6
+0000000000 65535 f 
+0000000009 00000 n 
+0000000058 00000 n 
+0000000115 00000 n 
+0000000241 00000 n 
+0000007791 00000 n 
+trailer
+<< /Size 6 /Root 1 0 R >>
+startxref
+7861
+%%EOF

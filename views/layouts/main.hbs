@@ -9,6 +9,7 @@
     <link rel="stylesheet" href="/styles/main.css">
     <link rel="stylesheet" href="/styles/map.css">
     <link rel="stylesheet" href="/styles/responsive.css">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha512-sA+e2atLYB3bJ1lGEBiRlaR271GGBqBP1ZiZsa1onZeXqIuAv89xDSHLVQQP4SRrped1I+tvkmHGWk+y3bG8hA==" crossorigin=""/>
     
     <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
@@ -78,6 +79,45 @@
         </div>
     </main>
 
+    <!-- Controles do Mapa -->
+    <div class="map-controls">
+        <button class="map-control-btn" id="centerMapBtn" title="Centralizar no meu local">
+            <i class="fas fa-location-arrow"></i>
+        </button>
+        <button class="map-control-btn" id="zoomInBtn" title="Aproximar">
+            <i class="fas fa-plus"></i>
+        </button>
+        <button class="map-control-btn" id="zoomOutBtn" title="Afastar">
+            <i class="fas fa-minus"></i>
+        </button>
+    </div>
+
+    <!-- Lista de Resultados Flutuante -->
+    <div class="results-panel" id="resultsPanel">
+        <div class="results-header">
+            <h3>Estabelecimentos Encontrados</h3>
+            <div class="results-count">
+                <span id="resultsCount">0</span> estabelecimentos
+            </div>
+            <button class="results-close" id="resultsClose">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        
+        <div class="results-list" id="resultsList">
+            <!-- Resultados carregados dinamicamente -->
+        </div>
+        
+        <div class="no-results" id="noResults" style="display: none;">
+            <div class="no-results-content">
+                <i class="fas fa-search"></i>
+                <h4>Nenhum estabelecimento encontrado</h4>
+                <p>Tente ajustar os filtros ou expandir o raio de busca</p>
+                <button class="btn btn-primary" id="adjustFiltersBtn">Ajustar Filtros</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Menu Lateral Esquerdo -->
     <div class="side-menu" id="sideMenu">
         <div class="menu-content">
@@ -136,36 +176,11 @@
     <div class="modal-overlay" id="modalOverlay"></div>
 
     <!-- Scripts -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha512-vEiX0TIwZqzPaWY5Avzkdxl3pNGdisz8Iky3Uczdlz7YT1Do1B4ezgmO6ijLJMEVN6MCMGN28M5jmcm4R2YfPw==" crossorigin=""></script>
     <script src="/scripts/layout.js"></script>
     <script src="/scripts/filters.js"></script>
     <script src="/scripts/map.js"></script>
     <script src="/scripts/capacitor.js"></script>
     <script src="/scripts/modals.js"></script>
-    
-    <!-- Google Maps API -->
-    <script>
-        const googleMapsApiKey = "{{googleMapsApiKey}}";
-        
-        // Carregar Google Maps API
-        function loadGoogleMaps() {
-            if (typeof google !== 'undefined') {
-                initMap();
-                return;
-            }
-            
-            const script = document.createElement('script');
-            script.src = `https://maps.googleapis.com/maps/api/js?key=${googleMapsApiKey}&callback=initMap&libraries=places,geometry&loading=async`;
-            script.async = true;
-            script.defer = true;
-            script.onerror = function() {
-                console.error('Erro ao carregar Google Maps API');
-                showMapError('Erro ao carregar o mapa. Verifique sua conexão com a internet.');
-            };
-            document.head.appendChild(script);
-        }
-        
-        // Inicializar quando a página carregar
-        document.addEventListener('DOMContentLoaded', loadGoogleMaps);
-    </script>
 </body>
 </html>

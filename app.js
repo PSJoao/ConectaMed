@@ -26,11 +26,11 @@ app.use(helmet({
       defaultSrc: ["'self'"],
       styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com", "https://cdnjs.cloudflare.com", "https://unpkg.com"],
       fontSrc: ["'self'", "https://fonts.gstatic.com", "https://cdnjs.cloudflare.com", "https://unpkg.com"],
-      scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'", "https://maps.googleapis.com", "https://cdnjs.cloudflare.com", "https://unpkg.com"],
+      scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'", "https://cdnjs.cloudflare.com", "https://unpkg.com"],
       scriptSrcAttr: ["'unsafe-inline'"],
-      imgSrc: ["'self'", "data:", "https://maps.gstatic.com", "https://maps.googleapis.com", "https://cdnjs.cloudflare.com", "https://unpkg.com", "https://*.tile.openstreetmap.org"],
-      connectSrc: ["'self'", "https://maps.googleapis.com", "https://*.tile.openstreetmap.org"],
-      frameSrc: ["'self'", "https://maps.googleapis.com"]
+      imgSrc: ["'self'", "data:", "https://cdnjs.cloudflare.com", "https://unpkg.com", "https://*.tile.openstreetmap.org"],
+      connectSrc: ["'self'", "https://*.tile.openstreetmap.org"],
+      frameSrc: ["'self'"]
     }
   }
 }));
@@ -168,7 +168,6 @@ app.use(express.static(path.join(__dirname, 'public')));
 app.use((req, res, next) => {
   res.locals.user = req.session.user || null;
   res.locals.isAuthenticated = !!req.session.user;
-  res.locals.googleMapsApiKey = process.env.GOOGLE_MAPS_API_KEY;
   next();
 });
 

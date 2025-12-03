@@ -28,7 +28,7 @@ O ConectaMed é uma plataforma web que permite aos usuários encontrar estabelec
 
 ### Frontend
 - **Handlebars.js** para templates
-- **Google Maps API** para mapas e geolocalização
+- **Leaflet + OpenStreetMap** para mapas e geolocalização gratuitos
 - **CSS3** com animações modernas
 - **JavaScript** vanilla para interatividade
 

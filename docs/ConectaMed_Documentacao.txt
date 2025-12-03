@@ -1,0 +1,55 @@
+CONECTAMED - DOCUMENTAÇÃO FUNCIONAL
+
+1. Contexto e Objetivo
+ConectaMed é uma plataforma web destinada a aproximar pacientes de serviços de saúde próximos, unificando informações sobre clínicas privadas, órgãos públicos, especialidades médicas, convênios aceitos e profissionais responsáveis. O objetivo principal é permitir que um usuário encontre estabelecimentos de confiança em poucos cliques, visualizando-os em um mapa responsivo e aplicando filtros conforme suas necessidades.
+
+2. Público-Alvo
+O sistema atende três perfis: pacientes em busca de atendimento imediato, administradores de clínicas que mantêm dados institucionais atualizados e gestores de órgãos públicos focados em transparência. Cada perfil utiliza a mesma base de dados, diferenciando-se pelos módulos de acesso e permissões administrativas.
+
+3. Visão Funcional
+3.1 Localização Inteligente: quando o usuário concede acesso à geolocalização, o mapa centraliza sua posição e prioriza resultados próximos; sem permissão, a interface assume São Paulo como referência inicial.
+3.2 Consulta Detalhada: cada estabelecimento possui ficha com endereço completo, contato, horário, descrição, especialidades, convênios e equipe médica. Os dados são persistidos em MongoDB e exibidos por templates Handlebars.
+3.3 Sistema de Filtros: combina busca textual, especialidades, convênios, tipo de estabelecimento e raio máximo. Os filtros aceitam múltiplos valores e alimentam consultas geoespaciais e textuais no backend.
+3.4 Painel em Mapa: o mapa full-screen usa Leaflet + OpenStreetMap. Marcadores exibem pop-ups com atalhos para detalhes, ligação e rotas externas, enquanto um painel lateral lista resultados em formato de cartões.
+3.5 Gestão de Estabelecimentos: administradores autenticados cadastram ou atualizam dados, incluindo médicos e convênios. As sessões usam express-session e as senhas são protegidas com bcrypt.
+3.6 Favoritos e Avaliações: usuários logados podem favoritar unidades e registrar avaliações simples. A nota média aparece nos pop-ups.
+
+4. Arquitetura Técnica
+Backend: Node.js com Express, rotas organizadas por domínio, controllers com regras de negócio e modelos Mongoose com índices textuais e 2dsphere. Helmet, CORS e rate limiting endurecem a superfície de ataque.
+Frontend: Handlebars compõe layouts e parciais; estilos ficam em CSS com responsividade; scripts dedicados (map.js, filters.js, layout.js, modals.js) cuidam da interação.
+Integrações: Leaflet consome tiles do OpenStreetMap. O serviço GoogleMapsService permanece disponível para geocodificação ou direções em rotinas administrativas.
+
+5. Fluxo do Usuário
+1) Acesso inicial mostra mapa e busca.
+2) Sistema tenta obter localização e ajusta o raio padrão (10 km) ou usa o fallback.
+3) Filtros são enviados a /api/estabelecimentos e retornam coleções paginadas até 50 itens.
+4) Marcadores e cartões exibem os mesmos dados; ações incluem abrir detalhes, ligar ou gerar rota externa.
+5) Logins e cadastros acontecem em modais, preservando o contexto visual do mapa.
+
+6. Estrutura de Pastas (resumo)
+/config: conexões e middlewares.
+/controllers: lógica de domínio (estabelecimento, médico, favorito, autenticação).
+/models: schemas Mongoose.
+/routes: rotas públicas, administrativas e APIs.
+/services: integrações externas (ex.: GoogleMapsService).
+/views: templates Handlebars e layouts.
+/public: assets estáticos (CSS, JS, imagens).
+/docs: documentação gerada.
+
+7. Modelo de Dados
+Estabelecimento: nome, CNPJ, endereço completo, telefone, descrição, tipo (clinica ou orgao_publico), conveniosGerais, localização (Point), médicos, avaliações, vínculo com administrador e flags de atividade. Índices geoespaciais e textuais garantem desempenho.
+Medico: nome, CRM, especialidades, convênios aceitos, biografia e referência ao estabelecimento.
+Usuario: credenciais, perfil (paciente, clinica, orgao_publico) e favoritos.
+
+8. Segurança
+Helmet aplica Content Security Policy alinhada ao Leaflet. Cookies de sessão são marcados como secure em produção e usam segredo definido no .env. Rate limiting restringe brute force em /api. As entradas dos filtros são normalizadas e validadas antes de formar consultas MongoDB.
+
+9. Implantação
+Requisitos: Node 16+, MongoDB local ou Atlas. Passos: instalar dependências, configurar .env (MONGODB_URI, SESSION_SECRET, PORT), executar seed opcional, rodar npm run dev para desenvolvimento e npm start após build para produção. Capacitor está preparado para empacotar o frontend em apps móveis.
+
+10. Roadmap Sugerido
+Autenticação federada para pacientes, filtros com disponibilidade em tempo real, heatmaps por especialidade, dashboards administrativos e notificações push usando Capacitor. Também é possível integrar direções diretas em Leaflet usando provedores gratuitos.
+
+11. Referências
+README.md fornece visão geral rápida, enquanto Planejamento Completo-2.pdf detalha requisitos iniciais. A documentação atual resume o estado presente do sistema, permitindo que qualquer novo membro compreenda rapidamente objetivos, arquitetura e fluxos principais.
+
