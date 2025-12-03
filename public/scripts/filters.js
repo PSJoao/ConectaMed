@@ -19,32 +19,31 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 function loadFilterOptions() {
-    fetch('/api/filtros/especialidades')
-        .then(res => res.json())
-        .then(data => {
-            if (data.success) {
-                populateFilterOptions('especialidadesContainer', data.data, 'especialidade');
-            }
-        })
-        .catch(error => console.error('Erro ao carregar especialidades:', error));
+    // Função auxiliar para fazer o fetch com tratamento de erro
+    const fetchOption = (url, containerId, type) => {
+        fetch(url)
+            .then(res => {
+                if (!res.ok) {
+                    throw new Error(`Erro HTTP: ${res.status}`);
+                }
+                return res.json();
+            })
+            .then(data => {
+                if (data.success) {
+                    // Verifica se data.data é um array válido antes de popular
+                    const options = Array.isArray(data.data) ? data.data : [];
+                    if (options.length) {
+                        populateFilterOptions(containerId, options, type);
+                    }
+                }
+            })
+            .catch(error => console.warn(`Falha ao carregar ${type}:`, error.message));
+    };
 
-    fetch('/api/filtros/convenios')
-        .then(res => res.json())
-        .then(data => {
-            if (data.success) {
-                populateFilterOptions('conveniosContainer', data.data, 'convenio');
-            }
-        })
-        .catch(error => console.error('Erro ao carregar convênios:', error));
-
-    fetch('/api/filtros/tipos')
-        .then(res => res.json())
-        .then(data => {
-            if (data.success && data.data.length) {
-                populateFilterOptions('tiposContainer', data.data, 'tipo');
-            }
-        })
-        .catch(error => console.error('Erro ao carregar tipos:', error));
+    // Chamadas protegidas
+    fetchOption('/api/filtros/especialidades', 'especialidadesContainer', 'especialidade');
+    fetchOption('/api/filtros/convenios', 'conveniosContainer', 'convenio');
+    fetchOption('/api/filtros/tipos', 'tiposContainer', 'tipo');
 }
 
 function populateFilterOptions(containerId, options, filterType) {

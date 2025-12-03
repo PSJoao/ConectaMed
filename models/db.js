@@ -161,6 +161,7 @@ async function searchEstabelecimentos({ search, tipos, convenios, latitude, long
   const params = [];
   const where = ['ativo = TRUE'];
 
+  // 1. Filtros Básicos
   if (tipos && tipos.length) {
     params.push(tipos);
     where.push(`tipo = ANY($${params.length})`);
@@ -179,26 +180,50 @@ async function searchEstabelecimentos({ search, tipos, convenios, latitude, long
     where.push(`(convenios_gerais && $${params.length})`);
   }
 
-  let query = `SELECT * FROM estabelecimentos`;
-  if (where.length) {
-    query += ' WHERE ' + where.join(' AND ');
-  }
+  // 2. Preparação da Lógica Geoespacial
+  let distanceColumn = '0 as distancia'; // Padrão se não tiver geo
+  let orderBy = 'ORDER BY id';           // Padrão se não tiver geo
 
-  // Aproximação de proximidade geográfica simples usando bounding box (sem extensão PostGIS)
   if (latitude != null && longitude != null && raioKm != null) {
     const lat = Number(latitude);
     const lng = Number(longitude);
     const raio = Number(raioKm);
-    const degLat = raio / 111; // ~111km por grau de latitude
-    const degLng = raio / (111 * Math.cos((lat * Math.PI) / 180));
-    params.push(lat - degLat, lat + degLat, lng - degLng, lng + degLng);
-    const baseIdx = params.length - 3;
-    query += where.length ? ' AND ' : ' WHERE ';
-    query += `(latitude BETWEEN $${baseIdx} AND $${baseIdx + 1}
-               AND longitude BETWEEN $${baseIdx + 2} AND $${baseIdx + 3})`;
+
+    // Adiciona latitude, longitude e raio aos parâmetros
+    params.push(lat, lng, raio);
+    const latIdx = params.length - 2;
+    const lngIdx = params.length - 1;
+    const raioIdx = params.length;
+
+    // Fórmula de Haversine para o SQL
+    const haversine = `
+      (6371 * acos(
+        least(1.0, greatest(-1.0,
+          cos(radians($${latIdx})) * cos(radians(latitude)) * cos(radians(longitude) - radians($${lngIdx})) + 
+          sin(radians($${latIdx})) * sin(radians(latitude))
+        ))
+      ))
+    `;
+
+    // Define a coluna de distância para o SELECT
+    distanceColumn = `${haversine} as distancia`;
+    
+    // Adiciona o filtro de raio ao WHERE
+    where.push(`(${haversine} <= $${raioIdx})`);
+
+    // Altera a ordenação para distância
+    orderBy = `ORDER BY distancia ASC`;
   }
 
-  query += ' ORDER BY id LIMIT 50';
+  // 3. Montagem da Query Final
+  // Agora declaramos a query apenas UMA vez, com as colunas certas
+  let query = `SELECT *, ${distanceColumn} FROM estabelecimentos`;
+
+  if (where.length) {
+    query += ' WHERE ' + where.join(' AND ');
+  }
+
+  query += ` ${orderBy} LIMIT 50`;
 
   const { rows } = await pool.query(query, params);
   return rows.map(mapRow);

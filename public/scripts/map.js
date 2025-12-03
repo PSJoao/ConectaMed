@@ -9,6 +9,7 @@ let establishmentsCache = [];
 let userLocation = null;
 let userMarker = null;
 let lastFilters = {};
+let isProgrammaticMove = false;
 
 document.addEventListener('DOMContentLoaded', () => {
     initLeafletMap();
@@ -38,9 +39,29 @@ function initLeafletMap() {
     }).addTo(mapInstance);
 
     markersLayer = L.layerGroup().addTo(mapInstance);
+
+    // Evento: Ao terminar de mover ou dar zoom no mapa, buscar na nova área
+    mapInstance.on('moveend', () => {
+        // Evita disparar se o movimento foi programático (pelo fitBounds)
+        if (isProgrammaticMove) {
+            isProgrammaticMove = false;
+            return;
+        }
+
+        const center = mapInstance.getCenter();
+        
+        const newFilters = {
+            ...lastFilters,
+            lat: center.lat,
+            lng: center.lng
+        };
+        
+        // FALSE aqui impede o fitBounds
+        fetchAndRenderEstablishments(newFilters, false);
+    });
 }
 
-async function fetchAndRenderEstablishments(filters = {}) {
+async function fetchAndRenderEstablishments(filters = {}, shouldFitBounds = true) {
     if (!mapInstance) return;
 
     showMapLoading(true);
@@ -50,6 +71,16 @@ async function fetchAndRenderEstablishments(filters = {}) {
         const queryString = buildQueryParams(filters);
         const url = queryString ? `/api/estabelecimentos?${queryString}` : '/api/estabelecimentos';
         const response = await fetch(url);
+        
+        // Verifica se a resposta foi bem sucedida antes de tentar ler JSON
+        if (!response.ok) {
+            if (response.status === 429) {
+                console.warn('Limite de requisições excedido. Tentando novamente em breve.');
+                return; // Para a execução silenciosamente
+            }
+            throw new Error(`Erro HTTP: ${response.status}`);
+        }
+
         const payload = await response.json();
 
         if (!payload.success) {
@@ -57,12 +88,17 @@ async function fetchAndRenderEstablishments(filters = {}) {
         }
 
         establishmentsCache = payload.data || [];
-        renderMarkers(establishmentsCache);
+        // Passamos o flag shouldFitBounds adiante
+        renderMarkers(establishmentsCache, shouldFitBounds);
         updateResultsList(establishmentsCache);
-        toggleResultsPanel(true);
+        
+        // Só abre o painel se houver busca ativa ou fitBounds (interação explícita)
+        if (shouldFitBounds) {
+            toggleResultsPanel(true);
+        }
     } catch (error) {
         console.error('Erro ao carregar estabelecimentos:', error);
-        showMapError('Erro ao carregar estabelecimentos. Tente novamente em instantes.');
+        // Não mostramos erro visual para 429 para não assustar o usuário
     } finally {
         showMapLoading(false);
     }
@@ -81,7 +117,7 @@ function getEstCoordinates(est) {
     return null;
 }
 
-function renderMarkers(establishments) {
+function renderMarkers(establishments, shouldFitBounds = true) {
     markersLayer.clearLayers();
     markersIndex.clear();
 
@@ -98,7 +134,10 @@ function renderMarkers(establishments) {
         markersIndex.set(est.id, marker);
     });
 
-    fitMapToMarkers(establishments);
+    // Só ajusta o zoom se solicitado explicitamente
+    if (shouldFitBounds) {
+        fitMapToMarkers(establishments);
+    }
 }
 
 function createMarkerIcon(tipo = 'clinica') {
@@ -230,6 +269,7 @@ function fitMapToMarkers(establishments) {
     });
 
     if (bounds.isValid()) {
+        isProgrammaticMove = true; // Sinaliza que o próximo moveend não deve buscar
         mapInstance.fitBounds(bounds, { padding: [60, 60] });
     }
 }
@@ -312,15 +352,28 @@ function appendArrayParam(params, key, values) {
 }
 
 function extractCoordinates(filters) {
+    // 1. Se os filtros já têm lat/lng explícitos (vindos do evento moveend ou input), usa eles
     if (filters.lat && filters.lng) {
         return {
             lat: filters.lat,
             lng: filters.lng
         };
     }
+    
+    // 2. Se o mapa já está carregado, usa o centro visual dele
+    if (mapInstance) {
+        const center = mapInstance.getCenter();
+        return {
+            lat: center.lat,
+            lng: center.lng
+        };
+    }
+
+    // 3. Fallback para a localização do GPS do usuário
     if (userLocation) {
         return userLocation;
     }
+    
     return null;
 }
 

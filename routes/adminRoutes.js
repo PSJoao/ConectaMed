@@ -1,5 +1,13 @@
 const express = require('express');
 const router = express.Router();
+// Importamos as funções do PostgreSQL em vez dos Models antigos
+const { 
+  findEstabelecimentoByAdmin, 
+  searchMedicos, 
+  findMedicoById,
+  getDistinctConvenios,
+  getDistinctEspecialidades
+} = require('../models/db');
 
 // Middleware para verificar autenticação
 const requireAuth = (req, res, next) => {
@@ -9,29 +17,20 @@ const requireAuth = (req, res, next) => {
   res.redirect('/login');
 };
 
-// Middleware para verificar se é admin
-const requireAdmin = (req, res, next) => {
-  if (req.session.user && req.session.user.tipo) {
-    return next();
-  }
-  res.redirect('/login');
-};
-
 // Dashboard principal
 router.get('/dashboard', requireAuth, async (req, res) => {
   try {
-    const Estabelecimento = require('../models/Estabelecimento');
-    const Medico = require('../models/Medico');
+    // Busca o estabelecimento gerenciado pelo usuário logado
+    const estabelecimento = await findEstabelecimentoByAdmin(req.session.user._id);
+    let totalMedicos = 0;
     
-    // Buscar estabelecimento do usuário
-    const estabelecimento = await Estabelecimento.findOne({ 
-      admin: req.session.user._id 
-    }).populate('medicos');
-
-    // Estatísticas básicas
-    const totalMedicos = await Medico.countDocuments({ 
-      estabelecimento: estabelecimento?._id 
-    });
+    // Se tiver estabelecimento, busca os médicos para contar e exibir
+    if (estabelecimento) {
+      const medicos = await searchMedicos({ estabelecimentoId: estabelecimento.id });
+      totalMedicos = medicos.length;
+      // Anexa os médicos ao objeto para caso a view precise listar
+      estabelecimento.medicos = medicos;
+    }
 
     res.render('dashboard', {
       title: 'Dashboard - ConectaMed',
@@ -48,14 +47,10 @@ router.get('/dashboard', requireAuth, async (req, res) => {
   }
 });
 
-// Gerenciar estabelecimento
+// Gerenciar estabelecimento (Dados da Clínica/Órgão)
 router.get('/estabelecimento', requireAuth, async (req, res) => {
   try {
-    const Estabelecimento = require('../models/Estabelecimento');
-    
-    const estabelecimento = await Estabelecimento.findOne({ 
-      admin: req.session.user._id 
-    });
+    const estabelecimento = await findEstabelecimentoByAdmin(req.session.user._id);
 
     res.render('admin/estabelecimento', {
       title: 'Gerenciar Estabelecimento',
@@ -71,26 +66,20 @@ router.get('/estabelecimento', requireAuth, async (req, res) => {
   }
 });
 
-// Gerenciar médicos
+// Gerenciar médicos (Listagem)
 router.get('/medicos', requireAuth, async (req, res) => {
   try {
-    const Estabelecimento = require('../models/Estabelecimento');
-    const Medico = require('../models/Medico');
-    
-    const estabelecimento = await Estabelecimento.findOne({ 
-      admin: req.session.user._id 
-    });
+    const estabelecimento = await findEstabelecimentoByAdmin(req.session.user._id);
 
     if (!estabelecimento) {
       return res.render('error', {
         title: 'Erro',
-        message: 'Estabelecimento não encontrado'
+        message: 'Estabelecimento não encontrado. Complete seu cadastro primeiro.'
       });
     }
 
-    const medicos = await Medico.find({ 
-      estabelecimento: estabelecimento._id 
-    }).sort({ nome: 1 });
+    // Busca médicos vinculados a este estabelecimento
+    const medicos = await searchMedicos({ estabelecimentoId: estabelecimento.id });
 
     res.render('admin/medicos', {
       title: 'Gerenciar Médicos',
@@ -107,7 +96,7 @@ router.get('/medicos', requireAuth, async (req, res) => {
   }
 });
 
-// Adicionar médico
+// Formulário para Adicionar Médico
 router.get('/medicos/novo', requireAuth, (req, res) => {
   res.render('admin/medico_form', {
     title: 'Adicionar Médico',
@@ -116,32 +105,24 @@ router.get('/medicos/novo', requireAuth, (req, res) => {
   });
 });
 
-// Editar médico
+// Formulário para Editar Médico
 router.get('/medicos/:id/editar', requireAuth, async (req, res) => {
   try {
-    const Medico = require('../models/Medico');
-    const Estabelecimento = require('../models/Estabelecimento');
-    
-    const estabelecimento = await Estabelecimento.findOne({ 
-      admin: req.session.user._id 
-    });
+    const estabelecimento = await findEstabelecimentoByAdmin(req.session.user._id);
 
     if (!estabelecimento) {
-      return res.render('error', {
-        title: 'Erro',
-        message: 'Estabelecimento não encontrado'
-      });
+      return res.redirect('/admin/dashboard');
     }
 
-    const medico = await Medico.findOne({ 
-      _id: req.params.id,
-      estabelecimento: estabelecimento._id 
-    });
+    // Busca o médico pelo ID
+    const medico = await findMedicoById(req.params.id);
 
-    if (!medico) {
+    // Segurança: Verifica se o médico existe e pertence ao estabelecimento do admin
+    // Nota: Como os IDs podem vir como números ou strings, usamos == ou conversão para comparar
+    if (!medico || String(medico.estabelecimentoId) !== String(estabelecimento.id)) {
       return res.render('error', {
-        title: 'Erro',
-        message: 'Médico não encontrado'
+        title: 'Acesso Negado',
+        message: 'Você não tem permissão para editar este médico ou ele não existe.'
       });
     }
 
@@ -162,11 +143,7 @@ router.get('/medicos/:id/editar', requireAuth, async (req, res) => {
 // Gerenciar convênios
 router.get('/convenios', requireAuth, async (req, res) => {
   try {
-    const Estabelecimento = require('../models/Estabelecimento');
-    
-    const estabelecimento = await Estabelecimento.findOne({ 
-      admin: req.session.user._id 
-    });
+    const estabelecimento = await findEstabelecimentoByAdmin(req.session.user._id);
 
     res.render('admin/convenios', {
       title: 'Gerenciar Convênios',
@@ -191,5 +168,3 @@ router.get('/configuracoes', requireAuth, (req, res) => {
 });
 
 module.exports = router;
-
-

@@ -1,5 +1,7 @@
 const express = require('express');
 const router = express.Router();
+// Importamos a função de busca do nosso módulo de banco de dados PostgreSQL
+const { searchEstabelecimentos } = require('../models/db');
 
 // Middleware para verificar autenticação
 const requireAuth = (req, res, next) => {
@@ -12,22 +14,20 @@ const requireAuth = (req, res, next) => {
 // Página inicial
 router.get('/', async (req, res) => {
   try {
-    const Estabelecimento = require('../models/Estabelecimento');
-    
-    // Buscar estabelecimentos para exibir no mapa
-    const estabelecimentos = await Estabelecimento.find({ ativo: true })
-      .select('nome enderecoCompleto localizacao telefone tipo')
-      .limit(100); // Limitar para performance
+    // A função searchEstabelecimentos já filtra por "ativo = TRUE" e limita os resultados
+    // Não precisamos mais de .find(), .select() ou .limit() do Mongoose
+    const estabelecimentos = await searchEstabelecimentos({});
 
     res.render('home_modern', {
       title: 'ConectaMed - Encontre serviços de saúde próximos',
+      // Passamos os dados como string JSON para o script do mapa no frontend
       estabelecimentos: JSON.stringify(estabelecimentos)
     });
   } catch (error) {
     console.error('Erro ao carregar página inicial:', error);
     res.render('home_simple', {
       title: 'ConectaMed - Encontre serviços de saúde próximos',
-      estabelecimentos: []
+      estabelecimentos: [] // Array vazio em caso de erro para não quebrar a página
     });
   }
 });
@@ -81,5 +81,3 @@ router.get('/contato', (req, res) => {
 });
 
 module.exports = router;
-
-
