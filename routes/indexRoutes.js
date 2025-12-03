@@ -80,4 +80,18 @@ router.get('/contato', (req, res) => {
   });
 });
 
+// Área do Parceiro (Login/Cadastro Específico)
+router.get('/sou-parceiro', (req, res) => {
+  if (req.session.user) {
+    // Se já estiver logado, redireciona conforme o tipo
+    if (req.session.user.tipo === 'usuario') return res.redirect('/');
+    return res.redirect('/admin/dashboard');
+  }
+  
+  res.render('parceiro_login', {
+    title: 'Área do Parceiro - ConectaMed',
+    layout: 'main' // Usa o layout padrão, mas a view será diferente
+  });
+});
+
 module.exports = router;

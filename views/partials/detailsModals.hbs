@@ -1,0 +1,71 @@
+<div class="modal right-sheet" id="establishmentModal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2 id="estModalName">Carregando...</h2>
+            <button class="modal-close" onclick="closeModal('establishmentModal')">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div class="modal-body" id="estModalBody">
+            <div class="est-header-info">
+                <span class="badge" id="estModalType">Tipo</span>
+                <div class="est-rating">
+                    <i class="fas fa-star"></i> <span id="estModalRating">--</span>
+                </div>
+            </div>
+            
+            <div class="est-details-section">
+                <p><i class="fas fa-map-marker-alt"></i> <span id="estModalAddress"></span></p>
+                <p><i class="fas fa-phone"></i> <span id="estModalPhone"></span></p>
+                <p><i class="fas fa-clock"></i> <span id="estModalHours"></span></p>
+            </div>
+
+            <div class="est-actions">
+                <a href="#" id="estRouteBtn" class="btn btn-primary" target="_blank">
+                    <i class="fas fa-directions"></i> Rota
+                </a>
+                <a href="#" id="estCallBtn" class="btn btn-outline">
+                    <i class="fas fa-phone"></i> Ligar
+                </a>
+            </div>
+
+            <hr>
+
+            <h3>Corpo Clínico</h3>
+            <div class="doctors-grid" id="estModalDoctors">
+                </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal center-modal" id="doctorModal">
+    <div class="modal-content doctor-content">
+        <div class="modal-header">
+            <h2 id="docModalName">Dr. Nome</h2>
+            <button class="modal-close" onclick="closeModal('doctorModal')">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div class="modal-body">
+            <div class="doctor-profile-header">
+                <div class="doctor-avatar">
+                    <i class="fas fa-user-md"></i>
+                </div>
+                <div>
+                    <p class="doctor-crm" id="docModalCRM">CRM: 12345</p>
+                    <div id="docModalSpecialties" class="tags-container"></div>
+                </div>
+            </div>
+            
+            <div class="doctor-bio-section">
+                <h4>Sobre</h4>
+                <p id="docModalBio">...</p>
+            </div>
+
+            <div class="doctor-insurances-section">
+                <h4>Convênios Aceitos</h4>
+                <div id="docModalInsurances" class="tags-list"></div>
+            </div>
+        </div>
+    </div>
+</div>

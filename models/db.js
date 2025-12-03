@@ -157,73 +157,92 @@ async function findEstabelecimentoById(id) {
   return mapRow(rows[0]);
 }
 
-async function searchEstabelecimentos({ search, tipos, convenios, latitude, longitude, raioKm }) {
+async function searchEstabelecimentos({ search, tipos, convenios, especialidade, latitude, longitude, raioKm }) {
   const params = [];
-  const where = ['ativo = TRUE'];
+  const where = ['e.ativo = TRUE'];
 
-  // 1. Filtros Básicos
+  // 1. Filtro de Tipo
   if (tipos && tipos.length) {
     params.push(tipos);
-    where.push(`tipo = ANY($${params.length})`);
+    where.push(`e.tipo = ANY($${params.length})`);
   }
 
+  // 2. Busca Textual (Clínica OR Médico associado)
   if (search) {
     params.push(`%${search}%`);
     const idx = params.length;
-    where.push(
-      `(nome ILIKE $${idx} OR endereco_completo ILIKE $${idx} OR descricao ILIKE $${idx})`
-    );
+    where.push(`(
+      e.nome ILIKE $${idx} OR 
+      e.endereco_completo ILIKE $${idx} OR 
+      e.descricao ILIKE $${idx} OR
+      EXISTS (
+        SELECT 1 FROM medicos m
+        JOIN medicos_estabelecimentos me ON me.medico_id = m.id
+        WHERE me.estabelecimento_id = e.id 
+        AND m.ativo = TRUE 
+        AND (m.nome ILIKE $${idx} OR m.biografia ILIKE $${idx})
+      )
+    )`);
   }
 
+  // 3. Filtro de Convênios
   if (convenios && convenios.length) {
     params.push(convenios);
-    where.push(`(convenios_gerais && $${params.length})`);
+    const idx = params.length;
+    where.push(`(
+      (e.convenios_gerais && $${idx}) OR
+      EXISTS (
+        SELECT 1 FROM medicos m
+        JOIN medicos_estabelecimentos me ON me.medico_id = m.id
+        WHERE me.estabelecimento_id = e.id 
+        AND m.ativo = TRUE 
+        AND (m.convenios_aceitos && $${idx})
+      )
+    )`);
   }
 
-  // 2. Preparação da Lógica Geoespacial
-  let distanceColumn = '0 as distancia'; // Padrão se não tiver geo
-  let orderBy = 'ORDER BY id';           // Padrão se não tiver geo
+  // 4. Filtro de Especialidades
+  if (especialidade && especialidade.length) {
+     params.push(especialidade);
+     const idx = params.length;
+     where.push(`EXISTS (
+        SELECT 1 FROM medicos m
+        JOIN medicos_estabelecimentos me ON me.medico_id = m.id
+        WHERE me.estabelecimento_id = e.id
+        AND m.ativo = TRUE
+        AND (m.especialidades && $${idx})
+     )`);
+  }
+
+  // 5. Geoespacial
+  let distanceColumn = '0 as distancia'; 
+  let orderBy = 'ORDER BY e.id';
 
   if (latitude != null && longitude != null && raioKm != null) {
     const lat = Number(latitude);
     const lng = Number(longitude);
     const raio = Number(raioKm);
 
-    // Adiciona latitude, longitude e raio aos parâmetros
     params.push(lat, lng, raio);
     const latIdx = params.length - 2;
     const lngIdx = params.length - 1;
     const raioIdx = params.length;
 
-    // Fórmula de Haversine para o SQL
     const haversine = `
       (6371 * acos(
         least(1.0, greatest(-1.0,
-          cos(radians($${latIdx})) * cos(radians(latitude)) * cos(radians(longitude) - radians($${lngIdx})) + 
-          sin(radians($${latIdx})) * sin(radians(latitude))
+          cos(radians($${latIdx})) * cos(radians(e.latitude)) * cos(radians(e.longitude) - radians($${lngIdx})) + 
+          sin(radians($${latIdx})) * sin(radians(e.latitude))
         ))
       ))
     `;
 
-    // Define a coluna de distância para o SELECT
     distanceColumn = `${haversine} as distancia`;
-    
-    // Adiciona o filtro de raio ao WHERE
     where.push(`(${haversine} <= $${raioIdx})`);
-
-    // Altera a ordenação para distância
     orderBy = `ORDER BY distancia ASC`;
   }
 
-  // 3. Montagem da Query Final
-  // Agora declaramos a query apenas UMA vez, com as colunas certas
-  let query = `SELECT *, ${distanceColumn} FROM estabelecimentos`;
-
-  if (where.length) {
-    query += ' WHERE ' + where.join(' AND ');
-  }
-
-  query += ` ${orderBy} LIMIT 50`;
+  const query = `SELECT e.*, ${distanceColumn} FROM estabelecimentos e WHERE ${where.join(' AND ')} ${orderBy} LIMIT 50`;
 
   const { rows } = await pool.query(query, params);
   return rows.map(mapRow);
@@ -258,7 +277,8 @@ async function getEstabelecimentoDetalhado(id) {
               )
             ) FILTER (WHERE m.id IS NOT NULL), '[]') AS medicos
      FROM estabelecimentos e
-     LEFT JOIN medicos m ON m.estabelecimento_id = e.id AND m.ativo = TRUE
+     LEFT JOIN medicos_estabelecimentos me ON me.estabelecimento_id = e.id
+     LEFT JOIN medicos m ON m.id = me.medico_id AND m.ativo = TRUE
      WHERE e.id = $1
      GROUP BY e.id`,
     [id]
@@ -320,23 +340,41 @@ async function findMedicoById(id) {
 
 async function createMedico(estabelecimentoId, data) {
   const {
-    nome,
-    crm,
-    especialidades = [],
-    conveniosAceitos = [],
-    biografia = '',
-    telefone = '',
-    email = '',
+    nome, crm, especialidades = [], conveniosAceitos = [],
+    biografia = '', telefone = '', email = ''
   } = data;
 
-  const { rows } = await pool.query(
-    `INSERT INTO medicos
-      (nome, crm, especialidades, convenios_aceitos, biografia, telefone, email, estabelecimento_id)
-     VALUES ($1,$2,$3,$4,$5,$6,$7,$8)
-     RETURNING *`,
-    [nome, crm, especialidades, conveniosAceitos, biografia, telefone, email, estabelecimentoId]
-  );
-  return mapRow(rows[0]);
+  const client = await pool.connect();
+  
+  try {
+    await client.query('BEGIN');
+
+    // 1. Cria o médico (sem estabelecimento_id)
+    const { rows: medicoRows } = await client.query(
+      `INSERT INTO medicos
+        (nome, crm, especialidades, convenios_aceitos, biografia, telefone, email)
+       VALUES ($1,$2,$3,$4,$5,$6,$7)
+       RETURNING *`,
+      [nome, crm, especialidades, conveniosAceitos, biografia, telefone, email]
+    );
+    
+    const medico = medicoRows[0];
+
+    // 2. Cria a relação na tabela de junção
+    await client.query(
+      `INSERT INTO medicos_estabelecimentos (medico_id, estabelecimento_id)
+       VALUES ($1, $2)`,
+      [medico.id, estabelecimentoId]
+    );
+
+    await client.query('COMMIT');
+    return mapRow(medico);
+  } catch (e) {
+    await client.query('ROLLBACK');
+    throw e;
+  } finally {
+    client.release();
+  }
 }
 
 async function findMedicoByCrm(crm) {

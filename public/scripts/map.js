@@ -229,20 +229,22 @@ function createResultCard(est) {
             <a class="btn btn-outline" href="tel:${est.telefone || ''}">
                 <i class="fas fa-phone"></i> Ligar
             </a>
-            <a class="btn btn-outline" href="/local/${est._id}">
+            <button class="btn btn-outline" onclick="showEstablishmentModal('${est.id}')">
                 <i class="fas fa-eye"></i> Ver detalhes
-            </a>
+            </button>
         </div>
     `;
 
     const focusBtn = card.querySelector('.result-focus');
     if (focusBtn) {
-        focusBtn.addEventListener('click', () => highlightMarker(est._id));
+        // CORRIGIDO: mudado de est._id para est.id
+        focusBtn.addEventListener('click', () => highlightMarker(est.id));
     }
 
     const routeBtn = card.querySelector('[data-action="route"]');
     if (routeBtn) {
-        routeBtn.addEventListener('click', () => openDirections(est._id));
+        // CORRIGIDO: mudado de est._id para est.id
+        routeBtn.addEventListener('click', () => openDirections(est.id));
     }
 
     return card;
@@ -457,22 +459,85 @@ window.zoomOut = function() {
     }
 };
 
-window.openDirections = function(establishmentId) {
-    const establishment = establishmentsCache.find(est => String(est.id) === String(establishmentId));
-    const coords = establishment ? getEstCoordinates(establishment) : null;
-    if (!coords) {
-        return;
-    }
-
-    const [lat, lng] = coords;
-    let url;
-
-    if (userLocation) {
-        url = `https://www.openstreetmap.org/directions?engine=fossgis_osrm_car&route=${userLocation.lat},${userLocation.lng};${lat},${lng}`;
-    } else {
-        url = `https://www.openstreetmap.org/?mlat=${lat}&mlon=${lng}#map=15/${lat}/${lng}`;
-    }
-
-    window.open(url, '_blank');
+window.openDirections = async function(id) {
+    // Nota: Renomeei a função antiga de rota para 'openDetails' conceitualmente
+    // Se for só para abrir detalhes, use esta função:
+    showEstablishmentModal(id);
 };
 
+async function showEstablishmentModal(id) {
+    const modal = document.getElementById('establishmentModal');
+    const body = document.getElementById('estModalBody');
+    
+    // Mostra loading
+    document.getElementById('estModalName').textContent = 'Carregando...';
+    modal.classList.add('show');
+    
+    try {
+        const res = await fetch(`/api/estabelecimentos/${id}`);
+        const data = await res.json();
+        
+        if (data.success) {
+            const est = data.data;
+            
+            // Preenche dados básicos
+            document.getElementById('estModalName').textContent = est.nome;
+            document.getElementById('estModalType').textContent = formatTipo(est.tipo);
+            document.getElementById('estModalAddress').textContent = est.enderecoCompleto;
+            document.getElementById('estModalPhone').textContent = est.telefone;
+            document.getElementById('estModalHours').textContent = est.horarioFuncionamento;
+            document.getElementById('estModalRating').textContent = est.notaMedia || 'N/A';
+            
+            // Botões
+            document.getElementById('estCallBtn').href = `tel:${est.telefone}`;
+            // (Lógica de rota do google maps/osm aqui...)
+
+            // Renderiza Médicos (Cards)
+            const doctorsContainer = document.getElementById('estModalDoctors');
+            doctorsContainer.innerHTML = '';
+            
+            if (est.medicos && est.medicos.length > 0) {
+                est.medicos.forEach(doc => {
+                    const card = document.createElement('div');
+                    card.className = 'doctor-mini-card';
+                    card.innerHTML = `
+                        <div class="doc-icon"><i class="fas fa-user-md"></i></div>
+                        <div class="doc-info">
+                            <h4>${doc.nome}</h4>
+                            <p>${doc.especialidades.join(', ')}</p>
+                        </div>
+                    `;
+                    card.onclick = () => showDoctorModal(doc);
+                    doctorsContainer.appendChild(card);
+                });
+            } else {
+                doctorsContainer.innerHTML = '<p class="no-docs">Nenhum médico cadastrado.</p>';
+            }
+        }
+    } catch (err) {
+        console.error(err);
+        alert('Erro ao carregar detalhes');
+    }
+}
+
+function showDoctorModal(doc) {
+    const modal = document.getElementById('doctorModal');
+    
+    document.getElementById('docModalName').textContent = doc.nome;
+    document.getElementById('docModalCRM').textContent = `CRM: ${doc.crm}`;
+    document.getElementById('docModalBio').textContent = doc.biografia || 'Sem biografia.';
+    
+    // Especialidades
+    const specsContainer = document.getElementById('docModalSpecialties');
+    specsContainer.innerHTML = doc.especialidades.map(s => `<span class="tag spec">${s}</span>`).join('');
+    
+    // Convênios
+    const insuranceContainer = document.getElementById('docModalInsurances');
+    insuranceContainer.innerHTML = doc.conveniosAceitos.map(c => `<span class="tag ins">${c}</span>`).join('');
+    
+    modal.classList.add('show');
+}
+
+window.closeModal = function(id) {
+    document.getElementById(id).classList.remove('show');
+};

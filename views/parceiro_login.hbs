@@ -1,0 +1,160 @@
+<div class="auth-page partner-page">
+    <div class="container">
+        <div class="auth-container partner-container">
+            <div class="auth-card">
+                <div class="auth-header">
+                    <h1 class="auth-title">Área do Parceiro</h1>
+                    <p class="auth-subtitle">Gerencie sua clínica ou unidade de saúde</p>
+                </div>
+
+                <div class="auth-tabs">
+                    <button class="auth-tab active" onclick="switchTab('login')">Entrar</button>
+                    <button class="auth-tab" onclick="switchTab('register')">Cadastrar Parceiro</button>
+                </div>
+
+                <form id="partnerLoginForm" class="auth-form active-form">
+                    <div class="form-group">
+                        <label class="form-label">Email Corporativo</label>
+                        <input type="email" name="email" class="form-input" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Senha</label>
+                        <div class="password-input">
+                            <input type="password" name="senha" class="form-input" required>
+                        </div>
+                    </div>
+                    <button type="submit" class="btn btn-primary btn-full">Acessar Painel</button>
+                </form>
+
+                <form id="partnerRegisterForm" class="auth-form" style="display: none;">
+                    <div class="form-section">
+                        <h4 class="form-section-title">Dados do Responsável</h4>
+                        <div class="form-group">
+                            <label class="form-label">Nome Completo</label>
+                            <input type="text" name="nome" class="form-input" required>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Email de Acesso</label>
+                            <input type="email" name="email" class="form-input" required>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Senha</label>
+                            <input type="password" name="senha" class="form-input" required minlength="6">
+                        </div>
+                    </div>
+
+                    <div class="form-section">
+                        <h4 class="form-section-title">Dados do Estabelecimento</h4>
+                        <div class="form-group">
+                            <label class="form-label">Tipo de Unidade</label>
+                            <select name="tipo" class="form-select" required>
+                                <option value="clinica">Clínica Particular</option>
+                                <option value="orgao_publico">Órgão Público / Hospital</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Nome do Estabelecimento</label>
+                            <input type="text" name="nomeEstabelecimento" class="form-input" required>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">CNPJ (Opcional)</label>
+                            <input type="text" name="cnpj" class="form-input" placeholder="00.000.000/0000-00">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Endereço Completo</label>
+                            <textarea name="enderecoCompleto" class="form-textarea" rows="2" required placeholder="Rua, Número, Bairro, Cidade - SP"></textarea>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Telefone</label>
+                            <input type="tel" name="telefone" class="form-input" required>
+                        </div>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary btn-full">Cadastrar Estabelecimento</button>
+                </form>
+                
+                <div class="auth-footer">
+                    <a href="/">Voltar ao site principal</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function switchTab(tab) {
+    const loginForm = document.getElementById('partnerLoginForm');
+    const registerForm = document.getElementById('partnerRegisterForm');
+    const tabs = document.querySelectorAll('.auth-tab');
+    
+    if (tab === 'login') {
+        loginForm.style.display = 'flex';
+        registerForm.style.display = 'none';
+        tabs[0].classList.add('active');
+        tabs[1].classList.remove('active');
+    } else {
+        loginForm.style.display = 'none';
+        registerForm.style.display = 'flex';
+        tabs[0].classList.remove('active');
+        tabs[1].classList.add('active');
+    }
+}
+
+// Lógica de envio (simplificada para o exemplo)
+document.getElementById('partnerRegisterForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    const formData = new FormData(this);
+    const data = Object.fromEntries(formData.entries());
+    
+    // Mostra loading...
+    
+    try {
+        const res = await fetch('/api/auth/register-partner', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(data)
+        });
+        const result = await res.json();
+        
+        if (result.success) {
+            window.location.href = result.redirect;
+        } else {
+            alert(result.error || 'Erro ao cadastrar');
+        }
+    } catch (err) {
+        console.error(err);
+        alert('Erro de conexão');
+    }
+});
+
+document.getElementById('partnerLoginForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    const formData = new FormData(this);
+    const data = Object.fromEntries(formData.entries());
+    
+    try {
+        const res = await fetch('/api/auth/login', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(data)
+        });
+        const result = await res.json();
+        
+        if (result.success) {
+            window.location.href = result.redirect;
+        } else {
+            alert(result.error || 'Erro ao entrar');
+        }
+    } catch (err) {
+        alert('Erro de conexão');
+    }
+});
+</script>
+
+<style>
+.partner-page { background: #1a202c; } /* Fundo escuro para diferenciar */
+.partner-container { max-width: 500px; }
+.auth-tabs { display: flex; margin-bottom: 20px; border-bottom: 2px solid #edf2f7; }
+.auth-tab { flex: 1; padding: 10px; background: none; border: none; font-weight: 600; color: #718096; cursor: pointer; }
+.auth-tab.active { color: #3b82f6; border-bottom: 2px solid #3b82f6; margin-bottom: -2px; }
+</style>

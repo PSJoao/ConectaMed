@@ -19,6 +19,7 @@ const requireAuth = (req, res, next) => {
 router.post('/auth/login', authController.login);
 router.post('/auth/register', authController.register);
 router.post('/auth/logout', authController.logout);
+router.post('/auth/register-partner', authController.registerPartner);
 
 // Rotas de estabelecimentos (públicas)
 router.get('/estabelecimentos', estabelecimentoController.buscarEstabelecimentos);

@@ -1819,3 +1819,80 @@ a:hover {
     }
 }
 
+/* Modais Laterais (Right Sheet) */
+.modal.right-sheet .modal-content {
+    position: fixed;
+    right: 0;
+    top: 0;
+    bottom: 0;
+    width: 400px;
+    max-width: 100%;
+    height: 100vh;
+    border-radius: 20px 0 0 20px;
+    transform: translateX(100%);
+    transition: transform 0.3s ease;
+    background: #fff;
+}
+
+.modal.right-sheet.show .modal-content {
+    transform: translateX(0);
+}
+
+/* Cards de Médicos */
+.doctors-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: 10px;
+    margin-top: 15px;
+}
+
+.doctor-mini-card {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    padding: 10px;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-align: center;
+}
+
+.doctor-mini-card:hover {
+    border-color: #3b82f6;
+    background: #fff;
+    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.15);
+    transform: translateY(-2px);
+}
+
+.doc-icon {
+    font-size: 1.5rem;
+    color: #64748b;
+    margin-bottom: 5px;
+}
+
+.doc-info h4 {
+    font-size: 0.9rem;
+    margin: 0;
+    color: #334155;
+}
+
+.doc-info p {
+    font-size: 0.75rem;
+    color: #64748b;
+    margin: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* Tags */
+.tag {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    margin-right: 5px;
+    margin-bottom: 5px;
+}
+
+.tag.spec { background: #e0f2fe; color: #0369a1; }
+.tag.ins { background: #dcfce7; color: #15803d; }
