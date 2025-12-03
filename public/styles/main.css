@@ -786,7 +786,7 @@ a:hover {
     bottom: 2rem;
     left: 2rem;
     right: 2rem;
-    max-height: 50vh;
+    max-height: 48vh;
     background: rgba(0, 0, 0, 0.8);
     backdrop-filter: blur(20px);
     border-radius: 1rem;
@@ -1819,80 +1819,108 @@ a:hover {
     }
 }
 
-/* Modais Laterais (Right Sheet) */
-.modal.right-sheet .modal-content {
-    position: fixed;
-    right: 0;
-    top: 0;
-    bottom: 0;
-    width: 400px;
-    max-width: 100%;
-    height: 100vh;
-    border-radius: 20px 0 0 20px;
-    transform: translateX(100%);
-    transition: transform 0.3s ease;
-    background: #fff;
+/* Ajustes para o Modal de Detalhes */
+.est-header-info {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
 }
 
-.modal.right-sheet.show .modal-content {
-    transform: translateX(0);
+.est-details-section p {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    margin-bottom: 0.8rem;
+    color: #4b5563;
 }
 
-/* Cards de Médicos */
+.est-details-section i {
+    color: #3b82f6;
+    margin-top: 4px;
+}
+
+.est-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+    margin: 1.5rem 0;
+}
+
+.modal-divider {
+    border: 0;
+    border-top: 1px solid #e5e7eb;
+    margin: 1.5rem 0;
+}
+
+/* Badge de Tipo */
+.badge {
+    background: #eff6ff;
+    color: #1d4ed8;
+    padding: 0.25rem 0.75rem;
+    border-radius: 1rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+}
+
+/* Grid de Médicos no Modal */
 .doctors-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
-    gap: 10px;
-    margin-top: 15px;
+    grid-template-columns: repeat(auto-fill, minmax(100%, 1fr)); /* 1 por linha no mobile */
+    gap: 1rem;
+}
+
+@media (min-width: 640px) {
+    .doctors-grid {
+        grid-template-columns: repeat(2, 1fr); /* 2 por linha em telas maiores */
+    }
 }
 
 .doctor-mini-card {
-    background: #f8fafc;
-    border: 1px solid #e2e8f0;
-    border-radius: 10px;
-    padding: 10px;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 1rem;
+    border: 1px solid #e5e7eb;
+    border-radius: 0.75rem;
+    transition: all 0.2s ease;
     cursor: pointer;
-    transition: all 0.2s;
-    text-align: center;
+    background: #fff;
 }
 
 .doctor-mini-card:hover {
     border-color: #3b82f6;
-    background: #fff;
-    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.15);
+    background: #f8fafc;
     transform: translateY(-2px);
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
 }
 
 .doc-icon {
-    font-size: 1.5rem;
-    color: #64748b;
-    margin-bottom: 5px;
-}
-
-.doc-info h4 {
-    font-size: 0.9rem;
-    margin: 0;
-    color: #334155;
-}
-
-.doc-info p {
-    font-size: 0.75rem;
-    color: #64748b;
-    margin: 0;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    width: 2.5rem;
+    height: 2.5rem;
+    background: #e0f2fe;
+    color: #0284c7;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.25rem;
 }
 
 /* Tags */
-.tag {
-    display: inline-block;
-    padding: 2px 8px;
-    border-radius: 12px;
-    font-size: 0.75rem;
-    margin-right: 5px;
-    margin-bottom: 5px;
+.tags-container, .tags-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-top: 0.5rem;
 }
 
-.tag.spec { background: #e0f2fe; color: #0369a1; }
+.tag {
+    padding: 0.25rem 0.75rem;
+    border-radius: 1rem;
+    font-size: 0.75rem;
+    font-weight: 500;
+}
+
+.tag.spec { background: #f3e8ff; color: #7e22ce; }
 .tag.ins { background: #dcfce7; color: #15803d; }

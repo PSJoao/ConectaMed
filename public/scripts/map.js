@@ -459,18 +459,44 @@ window.zoomOut = function() {
     }
 };
 
-window.openDirections = async function(id) {
-    // Nota: Renomeei a função antiga de rota para 'openDetails' conceitualmente
-    // Se for só para abrir detalhes, use esta função:
-    showEstablishmentModal(id);
+// Função auxiliar para abrir a rota no navegador
+window.openRoute = function(lat, lng) {
+    if (!lat || !lng) {
+        alert('Localização indisponível para traçar rota.');
+        return;
+    }
+
+    let url;
+    if (userLocation) {
+        // Se temos a localização do usuário, traça a rota de carro (OSRM)
+        url = `https://www.openstreetmap.org/directions?engine=fossgis_osrm_car&route=${userLocation.lat},${userLocation.lng};${lat},${lng}`;
+    } else {
+        // Se não, apenas abre o mapa centralizado no destino
+        url = `https://www.openstreetmap.org/?mlat=${lat}&mlon=${lng}#map=16/${lat}/${lng}`;
+    }
+    
+    window.open(url, '_blank');
 };
 
-async function showEstablishmentModal(id) {
+// Função chamada pelo botão "Traçar Rota" nos cards laterais
+window.openDirections = function(id) {
+    const est = establishmentsCache.find(e => String(e.id) === String(id));
+    if (est) {
+        const coords = getEstCoordinates(est); // Retorna [lat, lng]
+        if (coords) {
+            openRoute(coords[0], coords[1]);
+        }
+    }
+};
+
+// Função chamada pelo botão "Ver Detalhes"
+window.showEstablishmentModal = async function(id) {
     const modal = document.getElementById('establishmentModal');
-    const body = document.getElementById('estModalBody');
     
-    // Mostra loading
+    // Reset e Loading
     document.getElementById('estModalName').textContent = 'Carregando...';
+    document.getElementById('estModalDoctors').innerHTML = ''; 
+    
     modal.classList.add('show');
     
     try {
@@ -488,13 +514,20 @@ async function showEstablishmentModal(id) {
             document.getElementById('estModalHours').textContent = est.horarioFuncionamento;
             document.getElementById('estModalRating').textContent = est.notaMedia || 'N/A';
             
-            // Botões
+            // Configura botão de Ligar
             document.getElementById('estCallBtn').href = `tel:${est.telefone}`;
-            // (Lógica de rota do google maps/osm aqui...)
+            
+            // Configura botão de Rota dentro do modal
+            const routeBtn = document.getElementById('estRouteBtn');
+            routeBtn.onclick = (e) => {
+                e.preventDefault();
+                const lat = est.latitude || (est.localizacao ? est.localizacao.coordinates[1] : null);
+                const lng = est.longitude || (est.localizacao ? est.localizacao.coordinates[0] : null);
+                openRoute(lat, lng);
+            };
 
-            // Renderiza Médicos (Cards)
+            // Renderiza Médicos
             const doctorsContainer = document.getElementById('estModalDoctors');
-            doctorsContainer.innerHTML = '';
             
             if (est.medicos && est.medicos.length > 0) {
                 est.medicos.forEach(doc => {
@@ -511,16 +544,16 @@ async function showEstablishmentModal(id) {
                     doctorsContainer.appendChild(card);
                 });
             } else {
-                doctorsContainer.innerHTML = '<p class="no-docs">Nenhum médico cadastrado.</p>';
+                doctorsContainer.innerHTML = '<p style="padding:10px; color:#666; width:100%; text-align:center;">Nenhum médico cadastrado.</p>';
             }
         }
     } catch (err) {
         console.error(err);
-        alert('Erro ao carregar detalhes');
+        alert('Erro ao carregar detalhes do estabelecimento');
     }
-}
+};
 
-function showDoctorModal(doc) {
+window.showDoctorModal = function(doc) {
     const modal = document.getElementById('doctorModal');
     
     document.getElementById('docModalName').textContent = doc.nome;
@@ -529,14 +562,14 @@ function showDoctorModal(doc) {
     
     // Especialidades
     const specsContainer = document.getElementById('docModalSpecialties');
-    specsContainer.innerHTML = doc.especialidades.map(s => `<span class="tag spec">${s}</span>`).join('');
+    specsContainer.innerHTML = (doc.especialidades || []).map(s => `<span class="tag spec">${s}</span>`).join('');
     
     // Convênios
     const insuranceContainer = document.getElementById('docModalInsurances');
-    insuranceContainer.innerHTML = doc.conveniosAceitos.map(c => `<span class="tag ins">${c}</span>`).join('');
+    insuranceContainer.innerHTML = (doc.conveniosAceitos || []).map(c => `<span class="tag ins">${c}</span>`).join('');
     
     modal.classList.add('show');
-}
+};
 
 window.closeModal = function(id) {
     document.getElementById(id).classList.remove('show');
