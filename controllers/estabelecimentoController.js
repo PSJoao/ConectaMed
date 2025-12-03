@@ -1,6 +1,16 @@
-const Estabelecimento = require('../models/Estabelecimento');
-const Medico = require('../models/Medico');
-const googleMapsService = require('../services/GoogleMapsService');
+const {
+  searchEstabelecimentos,
+  getEstabelecimentosProximos,
+  getEstabelecimentoDetalhado,
+  updateEstabelecimentoByAdmin,
+  createEstabelecimento,
+  softDeleteEstabelecimentoByAdmin,
+  findEstabelecimentoByAdmin,
+  addAvaliacao,
+  getDistinctEspecialidades,
+  getDistinctConvenios,
+  getDistinctTiposEstabelecimento,
+} = require('../models/db');
 
 const normalizeToArray = (value) => {
   if (!value) return [];
@@ -31,94 +41,16 @@ const estabelecimentoController = {
       } = req.query;
 
       const tiposFiltro = normalizeToArray(tipo).filter(t => ['clinica', 'orgao_publico'].includes(t));
-      const especialidadesFiltro = normalizeToArray(especialidade);
       const conveniosFiltro = normalizeToArray(convenio);
 
-      const andConditions = [];
-
-      if (tiposFiltro.length) {
-        andConditions.push({ tipo: { $in: tiposFiltro } });
-      }
-
-      if (especialidadesFiltro.length) {
-        const medicosComEspecialidade = await Medico.find({
-          especialidades: { $in: especialidadesFiltro },
-          ativo: true
-        }).select('estabelecimento');
-
-        const estabelecimentosIds = medicosComEspecialidade
-          .map(m => m.estabelecimento)
-          .filter(Boolean);
-
-        andConditions.push({ _id: { $in: estabelecimentosIds } });
-      }
-
-      if (conveniosFiltro.length) {
-        const medicosComConvenio = await Medico.find({
-          conveniosAceitos: { $in: conveniosFiltro },
-          ativo: true
-        }).select('estabelecimento');
-
-        const estabelecimentosConvenio = medicosComConvenio
-          .map(m => m.estabelecimento)
-          .filter(Boolean);
-
-        andConditions.push({
-          $or: [
-            { conveniosGerais: { $in: conveniosFiltro } },
-            { _id: { $in: estabelecimentosConvenio } }
-          ]
-        });
-      }
-
-      if (search) {
-        const searchRegex = new RegExp(search, 'i');
-        andConditions.push({
-          $or: [
-            { nome: searchRegex },
-            { enderecoCompleto: searchRegex },
-            { descricao: searchRegex }
-          ]
-        });
-      }
-
-      let query = { ativo: true };
-
-      if (andConditions.length) {
-        query.$and = andConditions;
-      }
-
-      let estabelecimentos;
-
-      // Se coordenadas foram fornecidas, buscar por proximidade
-      if (lat && lng) {
-        const latitude = parseFloat(lat);
-        const longitude = parseFloat(lng);
-        const raioKm = parseFloat(raio);
-
-        const geoQuery = {
-          ...query,
-          localizacao: {
-            $near: {
-              $geometry: {
-                type: 'Point',
-                coordinates: [longitude, latitude]
-              },
-              $maxDistance: raioKm * 1000
-            }
-          }
-        };
-
-        estabelecimentos = await Estabelecimento.find(geoQuery)
-          .populate('medicos', 'nome especialidades conveniosAceitos')
-          .populate('admin', 'nome email')
-          .limit(50);
-      } else {
-        estabelecimentos = await Estabelecimento.find(query)
-          .populate('medicos', 'nome especialidades conveniosAceitos')
-          .populate('admin', 'nome email')
-          .limit(50);
-      }
+      const estabelecimentos = await searchEstabelecimentos({
+        search: search || null,
+        tipos: tiposFiltro.length ? tiposFiltro : null,
+        convenios: conveniosFiltro.length ? conveniosFiltro : null,
+        latitude: lat ? parseFloat(lat) : null,
+        longitude: lng ? parseFloat(lng) : null,
+        raioKm: raio ? parseFloat(raio) : null,
+      });
 
       res.json({
         success: true,
@@ -137,9 +69,7 @@ const estabelecimentoController = {
   // Buscar estabelecimento por ID
   async buscarPorId(req, res) {
     try {
-      const estabelecimento = await Estabelecimento.findById(req.params.id)
-        .populate('medicos', 'nome crm especialidades conveniosAceitos biografia telefone email')
-        .populate('admin', 'nome email tipo');
+      const estabelecimento = await getEstabelecimentoDetalhado(req.params.id);
 
       if (!estabelecimento) {
         return res.status(404).json({ 
@@ -170,14 +100,11 @@ const estabelecimentoController = {
       const longitude = parseFloat(lng);
       const raioKm = parseFloat(raio);
 
-      const estabelecimentos = await Estabelecimento.buscarProximos(
-        longitude, 
-        latitude, 
-        raioKm
-      )
-      .populate('medicos', 'nome especialidades conveniosAceitos')
-      .populate('admin', 'nome email')
-      .limit(20);
+      const estabelecimentos = await getEstabelecimentosProximos({
+        latitude,
+        longitude,
+        raioKm,
+      });
 
       res.json({
         success: true,
@@ -204,50 +131,36 @@ const estabelecimentoController = {
         horarioFuncionamento, 
         descricao, 
         site,
-        conveniosGerais 
+        conveniosGerais,
+        latitude,
+        longitude 
       } = req.body;
 
       const userId = req.session.user._id;
 
-      // Geocodificar endereço se fornecido
-      let coordenadas = null;
-      if (enderecoCompleto) {
-        try {
-          const geocoding = await googleMapsService.geocodificar(enderecoCompleto);
-          if (geocoding && geocoding.results && geocoding.results.length > 0) {
-            const location = geocoding.results[0].geometry.location;
-            coordenadas = [location.lng, location.lat];
-          }
-        } catch (geoError) {
-          console.error('Erro na geocodificação:', geoError);
-        }
-      }
+      const latNum = latitude ? parseFloat(latitude) : null;
+      const lngNum = longitude ? parseFloat(longitude) : null;
 
       // Buscar estabelecimento existente
-      let estabelecimento = await Estabelecimento.findOne({ admin: userId });
+      let estabelecimento = await findEstabelecimentoByAdmin(userId);
 
       if (estabelecimento) {
         // Atualizar existente
-        estabelecimento.nome = nome || estabelecimento.nome;
-        estabelecimento.cnpj = cnpj || estabelecimento.cnpj;
-        estabelecimento.enderecoCompleto = enderecoCompleto || estabelecimento.enderecoCompleto;
-        estabelecimento.telefone = telefone || estabelecimento.telefone;
-        estabelecimento.horarioFuncionamento = horarioFuncionamento || estabelecimento.horarioFuncionamento;
-        estabelecimento.descricao = descricao || estabelecimento.descricao;
-        estabelecimento.site = site || estabelecimento.site;
-        estabelecimento.conveniosGerais = conveniosGerais || estabelecimento.conveniosGerais;
-
-        if (coordenadas) {
-          estabelecimento.localizacao = {
-            type: 'Point',
-            coordinates: coordenadas
-          };
-        }
-
-        await estabelecimento.save();
+        estabelecimento = await updateEstabelecimentoByAdmin(userId, {
+          nome,
+          cnpj,
+          enderecoCompleto,
+          telefone,
+          horarioFuncionamento,
+          descricao,
+          site,
+          conveniosGerais: conveniosGerais || null,
+          latitude: latNum,
+          longitude: lngNum,
+        });
       } else {
         // Criar novo
-        estabelecimento = new Estabelecimento({
+        estabelecimento = await createEstabelecimento({
           nome,
           cnpj,
           enderecoCompleto,
@@ -256,16 +169,11 @@ const estabelecimentoController = {
           descricao,
           site,
           conveniosGerais: conveniosGerais || [],
-          localizacao: coordenadas ? {
-            type: 'Point',
-            coordinates: coordenadas
-          } : null,
-          admin: userId,
+          latitude: latNum,
+          longitude: lngNum,
+          adminId: userId,
           tipo: req.session.user.tipo,
-          ativo: true
         });
-
-        await estabelecimento.save();
       }
 
       res.json({
@@ -286,9 +194,8 @@ const estabelecimentoController = {
   async remover(req, res) {
     try {
       const userId = req.session.user._id;
-
-      const estabelecimento = await Estabelecimento.findOne({ admin: userId });
-      
+      const estabelecimento = await findEstabelecimentoByAdmin(userId);
+     
       if (!estabelecimento) {
         return res.status(404).json({ 
           error: 'Estabelecimento não encontrado' 
@@ -296,8 +203,7 @@ const estabelecimentoController = {
       }
 
       // Desativar em vez de remover
-      estabelecimento.ativo = false;
-      await estabelecimento.save();
+      await softDeleteEstabelecimentoByAdmin(userId);
 
       res.json({
         success: true,
@@ -324,15 +230,15 @@ const estabelecimentoController = {
         });
       }
 
-      const estabelecimento = await Estabelecimento.findById(id);
-      
+      const estabelecimento = await getEstabelecimentoDetalhado(id);
+     
       if (!estabelecimento) {
         return res.status(404).json({ 
           error: 'Estabelecimento não encontrado' 
         });
       }
 
-      await estabelecimento.adicionarAvaliacao(usuario, nota, comentario);
+      await addAvaliacao(id, { usuarioNome: usuario, nota, comentario });
 
       res.json({
         success: true,
@@ -350,7 +256,7 @@ const estabelecimentoController = {
   // Obter especialidades únicas
   async obterEspecialidades(req, res) {
     try {
-      const especialidades = await Medico.distinct('especialidades', { ativo: true });
+      const especialidades = await getDistinctEspecialidades();
       res.json({
         success: true,
         data: especialidades.sort()
@@ -366,11 +272,7 @@ const estabelecimentoController = {
   // Obter convênios únicos
   async obterConvenios(req, res) {
     try {
-      const convenios = await Estabelecimento.distinct('conveniosGerais', { ativo: true });
-      const conveniosMedicos = await Medico.distinct('conveniosAceitos', { ativo: true });
-      
-      const todosConvenios = [...new Set([...convenios, ...conveniosMedicos])];
-      
+      const todosConvenios = await getDistinctConvenios();
       res.json({
         success: true,
         data: todosConvenios.sort()
@@ -386,7 +288,7 @@ const estabelecimentoController = {
   // Obter tipos de estabelecimento
   async obterTipos(req, res) {
     try {
-      const tipos = await Estabelecimento.distinct('tipo', { ativo: true });
+      const tipos = await getDistinctTiposEstabelecimento();
       res.json({
         success: true,
         data: tipos

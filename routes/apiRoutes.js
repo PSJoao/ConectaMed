@@ -6,7 +6,6 @@ const authController = require('../controllers/authController');
 const estabelecimentoController = require('../controllers/estabelecimentoController');
 const medicoController = require('../controllers/medicoController');
 const favoritoController = require('../controllers/favoritoController');
-const googleMapsService = require('../services/GoogleMapsService');
 
 // Middleware para verificar autenticação
 const requireAuth = (req, res, next) => {
@@ -37,10 +36,6 @@ router.delete('/admin/estabelecimento', requireAuth, estabelecimentoController.r
 router.post('/admin/medicos', requireAuth, medicoController.criar);
 router.put('/admin/medicos/:id', requireAuth, medicoController.atualizar);
 router.delete('/admin/medicos/:id', requireAuth, medicoController.remover);
-
-// Rotas do Google Maps
-router.post('/geocoding', googleMapsService.geocodificar);
-router.get('/directions/:origin/:destination', googleMapsService.obterDirecoes);
 
 // Rotas de filtros dinâmicos
 router.get('/filtros/especialidades', estabelecimentoController.obterEspecialidades);

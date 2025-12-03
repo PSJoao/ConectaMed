@@ -262,24 +262,37 @@ document.addEventListener('DOMContentLoaded', function() {
     const ratingStars = document.querySelectorAll('.rating-star');
     const ratingInput = document.getElementById('rating');
     
-    // Handle directions button
+    // Handle directions button (OpenStreetMap / OSRM - totalmente open-source)
     directionsBtn.addEventListener('click', function() {
-        if (navigator.geolocation) {
-            navigator.geolocation.getCurrentPosition(function(position) {
-                const userLat = position.coords.latitude;
-                const userLng = position.coords.longitude;
-                const destination = '{{estabelecimento.enderecoCompleto}}';
-                
-                // Open Google Maps with directions
-                const url = `https://www.google.com/maps/dir/${userLat},${userLng}/${encodeURIComponent(destination)}`;
+        const destinationLat = {{#if estabelecimento.localizacao.coordinates}}{{estabelecimento.localizacao.coordinates.[1]}}{{else}}null{{/if}};
+        const destinationLng = {{#if estabelecimento.localizacao.coordinates}}{{estabelecimento.localizacao.coordinates.[0]}}{{else}}null{{/if}};
+
+        // Se tivermos coordenadas salvas no estabelecimento, usamos elas diretamente
+        if (destinationLat !== null && destinationLng !== null) {
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(
+                    function(position) {
+                        const userLat = position.coords.latitude;
+                        const userLng = position.coords.longitude;
+
+                        // Rota com engine OSRM (Open Source Routing Machine)
+                        const url = `https://www.openstreetmap.org/directions?engine=fossgis_osrm_car&route=${userLat},${userLng};${destinationLat},${destinationLng}`;
+                        window.open(url, '_blank');
+                    },
+                    function() {
+                        // Sem localização do usuário, apenas centraliza no ponto
+                        const url = `https://www.openstreetmap.org/?mlat=${destinationLat}&mlon=${destinationLng}#map=16/${destinationLat}/${destinationLng}`;
+                        window.open(url, '_blank');
+                    }
+                );
+            } else {
+                const url = `https://www.openstreetmap.org/?mlat=${destinationLat}&mlon=${destinationLng}#map=16/${destinationLat}/${destinationLng}`;
                 window.open(url, '_blank');
-            }, function(error) {
-                alert('Não foi possível obter sua localização. Abrindo mapa sem direções.');
-                const url = `https://www.google.com/maps/search/${encodeURIComponent('{{estabelecimento.enderecoCompleto}}')}`;
-                window.open(url, '_blank');
-            });
+            }
         } else {
-            const url = `https://www.google.com/maps/search/${encodeURIComponent('{{estabelecimento.enderecoCompleto}}')}`;
+            // Fallback: sem coordenadas, apenas busca o endereço no OSM/Nominatim
+            const encodedAddress = encodeURIComponent('{{estabelecimento.enderecoCompleto}}');
+            const url = `https://www.openstreetmap.org/search?query=${encodedAddress}`;
             window.open(url, '_blank');
         }
     });

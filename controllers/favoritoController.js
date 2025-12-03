@@ -1,5 +1,11 @@
-const Usuario = require('../models/Usuario');
-const Estabelecimento = require('../models/Estabelecimento');
+const {
+  findUsuarioById,
+  findEstabelecimentoById,
+  addFavorito,
+  removeFavorito,
+  listarFavoritos,
+  isFavorito,
+} = require('../models/db');
 
 const favoritoController = {
   // Adicionar estabelecimento aos favoritos
@@ -9,7 +15,7 @@ const favoritoController = {
       const userId = req.session.user._id;
 
       // Verificar se o estabelecimento existe
-      const estabelecimento = await Estabelecimento.findById(estabelecimentoId);
+      const estabelecimento = await findEstabelecimentoById(estabelecimentoId);
       if (!estabelecimento) {
         return res.status(404).json({
           error: 'Estabelecimento não encontrado'
@@ -17,14 +23,14 @@ const favoritoController = {
       }
 
       // Buscar usuário e adicionar favorito
-      const usuario = await Usuario.findById(userId);
+      const usuario = await findUsuarioById(userId);
       if (!usuario) {
         return res.status(404).json({
           error: 'Usuário não encontrado'
         });
       }
 
-      await usuario.adicionarFavorito(estabelecimentoId);
+      await addFavorito(userId, estabelecimentoId);
 
       res.json({
         success: true,
@@ -45,14 +51,14 @@ const favoritoController = {
       const { estabelecimentoId } = req.params;
       const userId = req.session.user._id;
 
-      const usuario = await Usuario.findById(userId);
+      const usuario = await findUsuarioById(userId);
       if (!usuario) {
         return res.status(404).json({
           error: 'Usuário não encontrado'
         });
       }
 
-      await usuario.removerFavorito(estabelecimentoId);
+      await removeFavorito(userId, estabelecimentoId);
 
       res.json({
         success: true,
@@ -72,14 +78,7 @@ const favoritoController = {
     try {
       const userId = req.session.user._id;
 
-      const usuario = await Usuario.findById(userId)
-        .populate({
-          path: 'favoritos',
-          populate: {
-            path: 'medicos',
-            select: 'nome especialidades conveniosAceitos'
-          }
-        });
+      const usuario = await findUsuarioById(userId);
 
       if (!usuario) {
         return res.status(404).json({
@@ -87,10 +86,12 @@ const favoritoController = {
         });
       }
 
+      const favoritos = await listarFavoritos(userId);
+
       res.json({
         success: true,
-        data: usuario.favoritos,
-        total: usuario.favoritos.length
+        data: favoritos,
+        total: favoritos.length
       });
 
     } catch (error) {
@@ -107,14 +108,14 @@ const favoritoController = {
       const { estabelecimentoId } = req.params;
       const userId = req.session.user._id;
 
-      const usuario = await Usuario.findById(userId);
+      const usuario = await findUsuarioById(userId);
       if (!usuario) {
         return res.status(404).json({
           error: 'Usuário não encontrado'
         });
       }
 
-      const ehFavorito = usuario.ehFavorito(estabelecimentoId);
+      const ehFavorito = await isFavorito(userId, estabelecimentoId);
 
       res.json({
         success: true,

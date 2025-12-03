@@ -1,6 +1,11 @@
-const Usuario = require('../models/Usuario');
-const Estabelecimento = require('../models/Estabelecimento');
-const googleMapsService = require('../services/GoogleMapsService');
+const bcrypt = require('bcryptjs');
+const {
+  findUsuarioByEmail,
+  createUsuario,
+  updateUsuarioLoginInfo,
+  createEstabelecimento,
+  setUsuarioEstabelecimento,
+} = require('../models/db');
 
 const authController = {
   // Login
@@ -15,7 +20,7 @@ const authController = {
       }
 
       // Buscar usuário
-      const usuario = await Usuario.findOne({ email }).select('+senha');
+      const usuario = await findUsuarioByEmail(email);
       
       if (!usuario) {
         return res.status(401).json({ 
@@ -24,7 +29,7 @@ const authController = {
       }
 
       // Verificar senha
-      const senhaValida = await usuario.compararSenha(senha);
+      const senhaValida = await bcrypt.compare(senha, usuario.senha);
       
       if (!senhaValida) {
         return res.status(401).json({ 
@@ -40,16 +45,15 @@ const authController = {
       }
 
       // Atualizar último login
-      usuario.ultimoLogin = new Date();
-      await usuario.save();
+      await updateUsuarioLoginInfo(usuario.id);
 
       // Criar sessão
       req.session.user = {
-        _id: usuario._id,
+        _id: usuario.id,
         nome: usuario.nome,
         email: usuario.email,
         tipo: usuario.tipo,
-        estabelecimento: usuario.estabelecimento
+        estabelecimento: usuario.estabelecimentoId
       };
 
       res.json({ 
@@ -85,67 +89,42 @@ const authController = {
       }
 
       // Verificar se email já existe
-      const usuarioExistente = await Usuario.findOne({ email });
+      const usuarioExistente = await findUsuarioByEmail(email);
       if (usuarioExistente) {
         return res.status(400).json({ 
           error: 'Email já cadastrado' 
         });
       }
 
-      // Geocodificar endereço
-      let coordenadas = null;
-      if (enderecoCompleto) {
-        try {
-          const geocoding = await googleMapsService.geocodificar(enderecoCompleto);
-          if (geocoding && geocoding.results && geocoding.results.length > 0) {
-            const location = geocoding.results[0].geometry.location;
-            coordenadas = [location.lng, location.lat];
-          }
-        } catch (geoError) {
-          console.error('Erro na geocodificação:', geoError);
-          // Continuar mesmo se a geocodificação falhar
-        }
-      }
-
       // Criar usuário
-      const usuario = new Usuario({
-        nome,
-        email,
-        senha,
-        tipo
-      });
-
-      await usuario.save();
+      const usuario = await createUsuario({ nome, email, senha, tipo });
 
       // Criar estabelecimento
-      const estabelecimento = new Estabelecimento({
+      const estabelecimento = await createEstabelecimento({
         nome,
         cnpj: cnpj || null,
         tipo,
         enderecoCompleto: enderecoCompleto || '',
         telefone: telefone || '',
         horarioFuncionamento: horarioFuncionamento || '',
-        localizacao: coordenadas ? {
-          type: 'Point',
-          coordinates: coordenadas
-        } : null,
-        admin: usuario._id,
-        ativo: true
+        descricao: null,
+        site: null,
+        conveniosGerais: [],
+        latitude: null,
+        longitude: null,
+        adminId: usuario.id,
       });
 
-      await estabelecimento.save();
-
       // Atualizar usuário com referência ao estabelecimento
-      usuario.estabelecimento = estabelecimento._id;
-      await usuario.save();
+      await setUsuarioEstabelecimento(usuario.id, estabelecimento.id);
 
       // Criar sessão
       req.session.user = {
-        _id: usuario._id,
+        _id: usuario.id,
         nome: usuario.nome,
         email: usuario.email,
         tipo: usuario.tipo,
-        estabelecimento: estabelecimento._id
+        estabelecimento: estabelecimento.id
       };
 
       res.status(201).json({ 

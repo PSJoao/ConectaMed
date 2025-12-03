@@ -1,5 +1,12 @@
-const Medico = require('../models/Medico');
-const Estabelecimento = require('../models/Estabelecimento');
+const {
+  searchMedicos,
+  findMedicoById,
+  createMedico,
+  findMedicoByCrm,
+  updateMedico,
+  softDeleteMedico,
+  findEstabelecimentoByAdmin,
+} = require('../models/db');
 
 const medicoController = {
   // Buscar médicos
@@ -12,32 +19,12 @@ const medicoController = {
         estabelecimento 
       } = req.query;
 
-      let query = { ativo: true };
-
-      // Filtro por busca textual
-      if (search) {
-        query.$text = { $search: search };
-      }
-
-      // Filtro por especialidade
-      if (especialidade) {
-        query.especialidades = { $in: [especialidade] };
-      }
-
-      // Filtro por convênio
-      if (convenio) {
-        query.conveniosAceitos = { $in: [convenio] };
-      }
-
-      // Filtro por estabelecimento
-      if (estabelecimento) {
-        query.estabelecimento = estabelecimento;
-      }
-
-      const medicos = await Medico.find(query)
-        .populate('estabelecimento', 'nome enderecoCompleto telefone')
-        .sort({ nome: 1 })
-        .limit(100);
+      const medicos = await searchMedicos({
+        search: search || null,
+        especialidade: especialidade || null,
+        convenio: convenio || null,
+        estabelecimentoId: estabelecimento || null,
+      });
 
       res.json({
         success: true,
@@ -56,8 +43,7 @@ const medicoController = {
   // Buscar médico por ID
   async buscarPorId(req, res) {
     try {
-      const medico = await Medico.findById(req.params.id)
-        .populate('estabelecimento', 'nome enderecoCompleto telefone horarioFuncionamento');
+      const medico = await findMedicoById(req.params.id);
 
       if (!medico) {
         return res.status(404).json({ 
@@ -94,7 +80,7 @@ const medicoController = {
       const userId = req.session.user._id;
 
       // Buscar estabelecimento do usuário
-      const estabelecimento = await Estabelecimento.findOne({ admin: userId });
+      const estabelecimento = await findEstabelecimentoByAdmin(userId);
       
       if (!estabelecimento) {
         return res.status(404).json({ 
@@ -103,7 +89,7 @@ const medicoController = {
       }
 
       // Verificar se CRM já existe
-      const medicoExistente = await Medico.findOne({ crm });
+      const medicoExistente = await findMedicoByCrm(crm);
       if (medicoExistente) {
         return res.status(400).json({ 
           error: 'CRM já cadastrado' 
@@ -111,7 +97,7 @@ const medicoController = {
       }
 
       // Criar médico
-      const medico = new Medico({
+      const medico = await createMedico(estabelecimento.id, {
         nome,
         crm,
         especialidades: especialidades || [],
@@ -119,15 +105,7 @@ const medicoController = {
         biografia: biografia || '',
         telefone: telefone || '',
         email: email || '',
-        estabelecimento: estabelecimento._id,
-        ativo: true
       });
-
-      await medico.save();
-
-      // Adicionar médico ao estabelecimento
-      estabelecimento.medicos.push(medico._id);
-      await estabelecimento.save();
 
       res.status(201).json({
         success: true,
@@ -166,7 +144,7 @@ const medicoController = {
       const userId = req.session.user._id;
 
       // Buscar estabelecimento do usuário
-      const estabelecimento = await Estabelecimento.findOne({ admin: userId });
+      const estabelecimento = await findEstabelecimentoByAdmin(userId);
       
       if (!estabelecimento) {
         return res.status(404).json({ 
@@ -174,10 +152,14 @@ const medicoController = {
         });
       }
 
-      // Buscar médico
-      const medico = await Medico.findOne({ 
-        _id: id,
-        estabelecimento: estabelecimento._id 
+      // Buscar médico e garantir que pertence ao estabelecimento do admin
+      const medico = await updateMedico(estabelecimento.id, id, {
+        nome,
+        especialidades,
+        conveniosAceitos,
+        biografia,
+        telefone,
+        email,
       });
 
       if (!medico) {
@@ -185,16 +167,6 @@ const medicoController = {
           error: 'Médico não encontrado' 
         });
       }
-
-      // Atualizar dados
-      medico.nome = nome || medico.nome;
-      medico.especialidades = especialidades || medico.especialidades;
-      medico.conveniosAceitos = conveniosAceitos || medico.conveniosAceitos;
-      medico.biografia = biografia || medico.biografia;
-      medico.telefone = telefone || medico.telefone;
-      medico.email = email || medico.email;
-
-      await medico.save();
 
       res.json({
         success: true,
@@ -217,7 +189,7 @@ const medicoController = {
       const userId = req.session.user._id;
 
       // Buscar estabelecimento do usuário
-      const estabelecimento = await Estabelecimento.findOne({ admin: userId });
+      const estabelecimento = await findEstabelecimentoByAdmin(userId);
       
       if (!estabelecimento) {
         return res.status(404).json({ 
@@ -225,13 +197,10 @@ const medicoController = {
         });
       }
 
-      // Buscar médico
-      const medico = await Medico.findOne({ 
-        _id: id,
-        estabelecimento: estabelecimento._id 
-      });
+      // Desativar em vez de remover
+      const existing = await softDeleteMedico(estabelecimento.id, id);
 
-      if (!medico) {
+      if (!existing) {
         return res.status(404).json({ 
           error: 'Médico não encontrado' 
         });

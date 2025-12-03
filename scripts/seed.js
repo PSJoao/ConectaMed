@@ -1,22 +1,5 @@
-const mongoose = require('mongoose');
-const bcrypt = require('bcryptjs');
 require('dotenv').config();
-
-// Importar modelos
-const Usuario = require('../models/Usuario');
-const Estabelecimento = require('../models/Estabelecimento');
-const Medico = require('../models/Medico');
-
-// Conectar ao MongoDB
-async function connectDB() {
-    try {
-        await mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/conectamed');
-        console.log('MongoDB conectado');
-    } catch (error) {
-        console.error('Erro ao conectar MongoDB:', error);
-        process.exit(1);
-    }
-}
+const { pool } = require('../config/db');
 
 // Dados de exemplo
 const usuariosExemplo = [
@@ -123,86 +106,114 @@ const medicosExemplo = [
     }
 ];
 
-// Função para criar dados de exemplo
+// Função para criar dados de exemplo em PostgreSQL
 async function criarDadosExemplo() {
-    try {
-        // Limpar dados existentes
-        await Usuario.deleteMany({});
-        await Estabelecimento.deleteMany({});
-        await Medico.deleteMany({});
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
 
-        console.log('Dados anteriores removidos');
+    // Limpar dados existentes (ordem respeitando FKs)
+    await client.query('DELETE FROM favoritos');
+    await client.query('DELETE FROM avaliacoes');
+    await client.query('DELETE FROM medicos');
+    await client.query('DELETE FROM estabelecimentos');
+    await client.query('DELETE FROM usuarios');
 
-        // Criar usuários
-        const usuarios = [];
-        for (const usuarioData of usuariosExemplo) {
-            const usuario = new Usuario(usuarioData);
-            await usuario.save();
-            usuarios.push(usuario);
-            console.log(`Usuário criado: ${usuario.nome}`);
-        }
+    console.log('Dados anteriores removidos');
 
-        // Criar estabelecimentos
-        const estabelecimentos = [];
-        for (let i = 0; i < estabelecimentosExemplo.length; i++) {
-            const estabelecimentoData = estabelecimentosExemplo[i];
-            const admin = usuarios[i + 1]; // Usar usuários de clínica/órgão público como admin
-            
-            if (!admin) {
-                console.log(`Usuário admin não encontrado para estabelecimento ${i}`);
-                continue;
-            }
-            
-            const estabelecimento = new Estabelecimento({
-                ...estabelecimentoData,
-                admin: admin._id
-            });
-            
-            await estabelecimento.save();
-            estabelecimentos.push(estabelecimento);
-            console.log(`Estabelecimento criado: ${estabelecimento.nome}`);
-        }
-
-        // Criar médicos
-        for (let i = 0; i < medicosExemplo.length; i++) {
-            const medicoData = medicosExemplo[i];
-            const estabelecimento = estabelecimentos[i % estabelecimentos.length]; // Distribuir médicos entre estabelecimentos
-            
-            const medico = new Medico({
-                ...medicoData,
-                estabelecimento: estabelecimento._id
-            });
-            
-            await medico.save();
-            
-            // Adicionar médico ao estabelecimento
-            estabelecimento.medicos.push(medico._id);
-            await estabelecimento.save();
-            
-            console.log(`Médico criado: ${medico.nome} - ${estabelecimento.nome}`);
-        }
-
-        console.log('Dados de exemplo criados com sucesso!');
-        console.log('\nUsuários de teste:');
-        console.log('Email: joao@exemplo.com | Senha: 123456 (Usuário comum)');
-        console.log('Email: maria@clinica.com | Senha: 123456 (Clínica)');
-        console.log('Email: carlos@hospital.com | Senha: 123456 (Órgão Público)');
-
-    } catch (error) {
-        console.error('Erro ao criar dados de exemplo:', error);
+    // Criar usuários
+    const usuarios = [];
+    for (const u of usuariosExemplo) {
+      const { rows } = await client.query(
+        `INSERT INTO usuarios (nome, email, senha, tipo)
+         VALUES ($1,$2,$3,$4)
+         RETURNING *`,
+        [u.nome, u.email, u.senha, u.tipo]
+      );
+      usuarios.push(rows[0]);
+      console.log(`Usuário criado: ${rows[0].nome}`);
     }
+
+    // Criar estabelecimentos (usando usuários[1] e usuários[2] como admins)
+    const estabelecimentos = [];
+    for (let i = 0; i < estabelecimentosExemplo.length; i++) {
+      const e = estabelecimentosExemplo[i];
+      const admin = usuarios[i + 1];
+      if (!admin) continue;
+
+      const { rows } = await client.query(
+        `INSERT INTO estabelecimentos
+           (nome, cnpj, tipo, endereco_completo, telefone, horario_funcionamento,
+            descricao, site, convenios_gerais, latitude, longitude, admin_id)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)
+         RETURNING *`,
+        [
+          e.nome,
+          e.cnpj,
+          e.tipo,
+          e.enderecoCompleto,
+          e.telefone,
+          e.horarioFuncionamento,
+          e.descricao,
+          e.site || null,
+          e.conveniosGerais || [],
+          e.localizacao ? e.localizacao.coordinates[1] : null,
+          e.localizacao ? e.localizacao.coordinates[0] : null,
+          admin.id,
+        ]
+      );
+      estabelecimentos.push(rows[0]);
+      console.log(`Estabelecimento criado: ${rows[0].nome}`);
+    }
+
+    // Criar médicos
+    for (let i = 0; i < medicosExemplo.length; i++) {
+      const m = medicosExemplo[i];
+      const est = estabelecimentos[i % estabelecimentos.length];
+      const { rows } = await client.query(
+        `INSERT INTO medicos
+           (nome, crm, especialidades, convenios_aceitos, biografia, telefone, email, estabelecimento_id)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8)
+         RETURNING *`,
+        [
+          m.nome,
+          m.crm,
+          m.especialidades || [],
+          m.conveniosAceitos || [],
+          m.biografia,
+          m.telefone,
+          m.email,
+          est.id,
+        ]
+      );
+      console.log(`Médico criado: ${rows[0].nome} - ${est.nome}`);
+    }
+
+    await client.query('COMMIT');
+
+    console.log('Dados de exemplo criados com sucesso!');
+    console.log('\nUsuários de teste:');
+    console.log('Email: joao@exemplo.com | Senha: 123456 (Usuário comum)');
+    console.log('Email: maria@clinica.com | Senha: 123456 (Clínica)');
+    console.log('Email: carlos@hospital.com | Senha: 123456 (Órgão Público)');
+  } catch (error) {
+    await client.query('ROLLBACK');
+    console.error('Erro ao criar dados de exemplo:', error);
+    process.exit(1);
+  } finally {
+    client.release();
+  }
 }
 
 // Executar script
 async function main() {
-    await connectDB();
-    await criarDadosExemplo();
-    await mongoose.connection.close();
-    console.log('Script finalizado');
+  await criarDadosExemplo();
+  console.log('Script finalizado');
+  process.exit(0);
 }
 
 if (require.main === module) {
-    main();
+  main();
 }
 
 module.exports = { criarDadosExemplo };

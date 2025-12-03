@@ -1,17 +1,24 @@
-const mongoose = require('mongoose');
+const { Pool } = require('pg');
+
+// Configuração padrão de conexão com PostgreSQL
+// Usa DATABASE_URL se existir, senão monta a partir das variáveis PG* ou dos defaults informados.
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  host: process.env.PGHOST || 'localhost',
+  port: Number(process.env.PGPORT) || 5432,
+  database: process.env.PGDATABASE || 'conectamed',
+  user: process.env.PGUSER || 'postgres',
+  password: process.env.PGPASSWORD || 'postdba',
+});
 
 const connectDB = async () => {
   try {
-    const conn = await mongoose.connect(process.env.MONGO_URI, {
-      useNewUrlParser: true,
-      useUnifiedTopology: true,
-    });
-
-    console.log(`MongoDB conectado: ${conn.connection.host}`);
+    await pool.query('SELECT 1');
+    console.log('PostgreSQL conectado com sucesso');
   } catch (error) {
-    console.error('Erro ao conectar com MongoDB:', error.message);
+    console.error('Erro ao conectar com PostgreSQL:', error.message);
     process.exit(1);
   }
 };
 
-module.exports = connectDB;
+module.exports = { pool, connectDB };

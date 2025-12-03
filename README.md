@@ -22,7 +22,7 @@ O ConectaMed é uma plataforma web que permite aos usuários encontrar estabelec
 
 ### Backend
 - **Node.js** com Express.js
-- **MongoDB** com Mongoose
+- **PostgreSQL** usando driver `pg`
 - **Autenticação** com bcryptjs e express-session
 - **Segurança** com helmet e express-rate-limit
 
@@ -33,7 +33,7 @@ O ConectaMed é uma plataforma web que permite aos usuários encontrar estabelec
 - **JavaScript** vanilla para interatividade
 
 ### Recursos
-- **Geolocalização** com índices geoespaciais do MongoDB
+- **Geolocalização** com campos de latitude/longitude no PostgreSQL
 - **Busca textual** com regex
 - **Sistema de modais** para melhor UX
 - **Design responsivo** para todos os dispositivos
@@ -42,7 +42,7 @@ O ConectaMed é uma plataforma web que permite aos usuários encontrar estabelec
 
 ### Pré-requisitos
 - Node.js (versão 16 ou superior)
-- MongoDB (local ou Atlas)
+- PostgreSQL (local ou em servidor)
 - Chave da API do Google Maps
 
 ### Passos
@@ -61,7 +61,12 @@ npm install
 3. **Configure as variáveis de ambiente**
 Crie um arquivo `.env` na raiz do projeto:
 ```env
-MONGODB_URI=mongodb://localhost:27017/conectamed
+# Configuração de banco PostgreSQL (exemplo local)
+PGHOST=localhost
+PGPORT=5432
+PGDATABASE=conectamed
+PGUSER=postgres
+PGPASSWORD=postdba
 GOOGLE_MAPS_API_KEY=sua_chave_aqui
 SESSION_SECRET=seu_secret_aqui
 PORT=3000
@@ -156,7 +161,8 @@ Após executar o seed, você terá os seguintes usuários para teste:
 ### Variáveis de Ambiente para Produção
 ```env
 NODE_ENV=production
-MONGODB_URI=mongodb+srv://usuario:senha@cluster.mongodb.net/conectamed
+# Exemplo de DATABASE_URL (Heroku, Render, etc.)
+# DATABASE_URL=postgres://usuario:senha@host:5432/conectamed
 GOOGLE_MAPS_API_KEY=sua_chave_producao
 SESSION_SECRET=secret_muito_seguro
 PORT=3000

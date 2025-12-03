@@ -68,23 +68,34 @@ async function fetchAndRenderEstablishments(filters = {}) {
     }
 }
 
+function getEstCoordinates(est) {
+    // Novo formato vindo do PostgreSQL: latitude / longitude
+    if (typeof est.latitude === 'number' && typeof est.longitude === 'number') {
+        return [est.latitude, est.longitude];
+    }
+    // Fallback para formato antigo (MongoDB) se ainda aparecer em alguma resposta
+    if (est.localizacao && Array.isArray(est.localizacao.coordinates)) {
+        const [lng, lat] = est.localizacao.coordinates;
+        return [lat, lng];
+    }
+    return null;
+}
+
 function renderMarkers(establishments) {
     markersLayer.clearLayers();
     markersIndex.clear();
 
     establishments.forEach(est => {
-        if (!est.localizacao || !Array.isArray(est.localizacao.coordinates)) {
-            return;
-        }
+        const coords = getEstCoordinates(est);
+        if (!coords) return;
 
-        const [lng, lat] = est.localizacao.coordinates;
-        const marker = L.marker([lat, lng], {
+        const marker = L.marker(coords, {
             icon: createMarkerIcon(est.tipo)
         });
 
         marker.bindPopup(createPopupContent(est));
         marker.addTo(markersLayer);
-        markersIndex.set(est._id, marker);
+        markersIndex.set(est.id, marker);
     });
 
     fitMapToMarkers(establishments);
@@ -101,9 +112,9 @@ function createMarkerIcon(tipo = 'clinica') {
 }
 
 function createPopupContent(est) {
-    const rating = Array.isArray(est.avaliacoes) && est.avaliacoes.length > 0
-        ? (est.avaliacoes.reduce((sum, aval) => sum + (aval.nota || 0), 0) / est.avaliacoes.length).toFixed(1)
-        : 'N/D';
+    // No formato atual da API ainda não recebemos as avaliações agregadas aqui,
+    // então exibimos "N/D" por padrão.
+    const rating = 'N/D';
 
     return `
         <div class="marker-popup">
@@ -114,10 +125,10 @@ function createPopupContent(est) {
             <p><strong>Horário:</strong> ${est.horarioFuncionamento || 'Não informado'}</p>
             <p><strong>Avaliação:</strong> ${rating}</p>
             <div class="popup-actions">
-                <button class="btn btn-primary" onclick="openDirections('${est._id}')">
+                <button class="btn btn-primary" onclick="openDirections('${est.id}')">
                     <i class="fas fa-route"></i> Rota
                 </button>
-                <a class="btn btn-secondary" href="/local/${est._id}">
+                <a class="btn btn-secondary" href="/local/${est.id}">
                     <i class="fas fa-info-circle"></i> Detalhes
                 </a>
             </div>
@@ -212,9 +223,9 @@ function fitMapToMarkers(establishments) {
 
     const bounds = L.latLngBounds([]);
     establishments.forEach(est => {
-        if (est.localizacao && est.localizacao.coordinates) {
-            const [lng, lat] = est.localizacao.coordinates;
-            bounds.extend([lat, lng]);
+        const coords = getEstCoordinates(est);
+        if (coords) {
+            bounds.extend(coords);
         }
     });
 
@@ -394,12 +405,13 @@ window.zoomOut = function() {
 };
 
 window.openDirections = function(establishmentId) {
-    const establishment = establishmentsCache.find(est => est._id === establishmentId);
-    if (!establishment || !establishment.localizacao || !establishment.localizacao.coordinates) {
+    const establishment = establishmentsCache.find(est => String(est.id) === String(establishmentId));
+    const coords = establishment ? getEstCoordinates(establishment) : null;
+    if (!coords) {
         return;
     }
 
-    const [lng, lat] = establishment.localizacao.coordinates;
+    const [lat, lng] = coords;
     let url;
 
     if (userLocation) {

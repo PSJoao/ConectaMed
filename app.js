@@ -7,7 +7,10 @@ const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 require('dotenv').config();
 
-const connectDB = require('./config/db');
+const { connectDB } = require('./config/db');
+
+// Segredo de sessão com fallback seguro em desenvolvimento
+const SESSION_SECRET = process.env.SESSION_SECRET || 'dev_secret_change_me';
 
 // Importar rotas
 const indexRoutes = require('./routes/indexRoutes');
@@ -55,7 +58,7 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 // Configuração de sessão
 app.use(session({
-  secret: process.env.SESSION_SECRET,
+  secret: SESSION_SECRET,
   resave: false,
   saveUninitialized: false,
   cookie: {
@@ -179,11 +182,9 @@ app.use('/api', apiRoutes);
 // Rota para perfil de estabelecimento
 app.get('/local/:id', async (req, res) => {
   try {
-    const Estabelecimento = require('./models/Estabelecimento');
-    const estabelecimento = await Estabelecimento.findById(req.params.id)
-      .populate('medicos')
-      .populate('admin', 'nome email tipo');
-    
+    const { getEstabelecimentoDetalhado } = require('./models/db');
+    const estabelecimento = await getEstabelecimentoDetalhado(req.params.id);
+
     if (!estabelecimento) {
       return res.status(404).render('404', {
         title: 'Estabelecimento não encontrado',
