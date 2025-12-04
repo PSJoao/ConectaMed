@@ -1,15 +1,15 @@
 const express = require('express');
 const router = express.Router();
-// Importamos a função de busca do nosso módulo de banco de dados PostgreSQL
 const { searchEstabelecimentos } = require('../models/db');
 
-// Middleware para verificar autenticação
-const requireAuth = (req, res, next) => {
-  if (req.session.user) {
-    return next();
-  }
-  res.redirect('/login');
-};
+// --- MIDDLEWARE GLOBAL DE USUÁRIO ---
+// Isso garante que a variável {{user}} esteja disponível em todos os arquivos .hbs
+router.use((req, res, next) => {
+  res.locals.user = req.session.user || null;
+  // Admin se for tipo 'admin' OU se for o email específico
+  res.locals.isAdmin = req.session.user && (req.session.user.tipo === 'admin' || req.session.user.email === 'admin@conectamed.com');
+  next();
+});
 
 // Página inicial
 router.get('/', async (req, res) => {

@@ -1,0 +1,100 @@
+<div class="modal" id="adminModal">
+    <div class="modal-content admin-modal-content">
+        <div class="modal-header">
+            <h2><i class="fas fa-cogs"></i> Gestão Administrativa</h2>
+            <button class="modal-close" onclick="closeModal('adminModal')">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        
+        <div class="modal-body">
+            <div class="admin-tabs">
+                <button class="admin-tab active" onclick="switchAdminTab('est')">
+                    <i class="fas fa-hospital"></i> Novo Estabelecimento
+                </button>
+                <button class="admin-tab" onclick="switchAdminTab('med')">
+                    <i class="fas fa-user-md"></i> Novo Médico
+                </button>
+            </div>
+
+            <form id="adminEstForm" class="admin-form active">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Nome do Local</label>
+                        <input type="text" name="nome" class="form-input" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Tipo</label>
+                        <select name="tipo" class="form-select" required>
+                            <option value="clinica">Clínica Particular</option>
+                            <option value="orgao_publico">Órgão Público/Hospital</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label>Endereço Completo</label>
+                    <input type="text" name="enderecoCompleto" class="form-input" placeholder="Rua, Número, Bairro, Cidade - SP" required>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Latitude</label>
+                        <input type="number" step="any" name="latitude" class="form-input" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Longitude</label>
+                        <input type="number" step="any" name="longitude" class="form-input" required>
+                    </div>
+                    <button type="button" class="btn btn-icon" onclick="fillCurrentLocation()" title="Usar minha localização">
+                        <i class="fas fa-map-marker-alt"></i>
+                    </button>
+                </div>
+
+                <div class="form-group">
+                    <label>Telefone</label>
+                    <input type="text" name="telefone" class="form-input" required>
+                </div>
+
+                <div class="form-group">
+                    <label>Convênios (Separados por vírgula)</label>
+                    <input type="text" name="conveniosGerais" class="form-input" placeholder="Ex: Unimed, SUS, Bradesco">
+                </div>
+
+                <button type="submit" class="btn btn-primary btn-full">Cadastrar Estabelecimento</button>
+            </form>
+
+            <form id="adminMedForm" class="admin-form" style="display: none;">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Nome do Médico</label>
+                        <input type="text" name="nome" class="form-input" required>
+                    </div>
+                    <div class="form-group">
+                        <label>CRM</label>
+                        <input type="text" name="crm" class="form-input" required>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Especialidades (Separadas por vírgula)</label>
+                    <input type="text" name="especialidades" class="form-input" placeholder="Ex: Cardiologia, Pediatria" required>
+                </div>
+
+                <div class="form-group">
+                    <label>Vincular a Estabelecimentos (Segure Ctrl p/ selecionar vários)</label>
+                    <select name="estabelecimentoIds" id="estSelectMultiple" class="form-select" multiple required style="height: 120px;">
+                        <option>Carregando...</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label>Convênios que ESTE médico aceita</label>
+                    <input type="text" name="conveniosAceitos" class="form-input" placeholder="Ex: Unimed, Particular">
+                </div>
+
+                <button type="submit" class="btn btn-primary btn-full">Cadastrar Médico</button>
+            </form>
+        </div>
+    </div>
+</div>
